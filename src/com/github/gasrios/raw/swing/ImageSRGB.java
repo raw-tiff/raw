@@ -1,4 +1,16 @@
 /*
+ * © 2016 Guilherme Rios All Rights Reserved
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+/*
  * See https://docs.oracle.com/javase/7/docs/api/java/awt/image/BufferedImage.html
  *
  * By the time this class comes into play we hopefully are done with all the editing and have but one concern: displaying it.
