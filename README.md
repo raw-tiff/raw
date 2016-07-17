@@ -1,6 +1,12 @@
+This is not a production ready raw reader, just a personal project I started while studying digital image processing.
+
+If you need a complete, fully functional library, check dcraw out: https://www.cybercom.net/~dcoffin/dcraw/
+
+Currently the only format supported is uncompressed, linear Adobe DNG.
+
 ** Dependencies And Additional Licenses **
 
-This software uses Adobe's XMP Toolkit for Java, licensed under the BSD license. The original source can be downloaded here: http://www.adobe.com/devnet/xmp/library/eula-xmp-library-java.html
+This software uses Adobe XMP Toolkit for Java, licensed under the BSD license. The original source can be downloaded here: http://www.adobe.com/devnet/xmp/library/eula-xmp-library-java.html
 
 Copyright (c) 2009, Adobe Systems Incorporated  All rights reserved.
 
