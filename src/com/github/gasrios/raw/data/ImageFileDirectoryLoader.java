@@ -35,25 +35,25 @@ import com.adobe.xmp.XMPException;
 import com.adobe.xmp.XMPMeta;
 import com.adobe.xmp.XMPMetaFactory;
 import com.adobe.xmp.properties.XMPPropertyInfo;
-import com.github.gasrios.raw.io.DngInputStream;
-import com.github.gasrios.raw.lang.DngProcessorException;
+import com.github.gasrios.raw.io.TiffInputStream;
+import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.lang.RATIONAL;
 import com.github.gasrios.raw.lang.SRATIONAL;
 
 public final class ImageFileDirectoryLoader {
 
-	private DngInputStream in;
+	private TiffInputStream in;
 	private ImageFileDirectory ifd;
 
-	public ImageFileDirectoryLoader(DngInputStream in) {
+	public ImageFileDirectoryLoader(TiffInputStream in) {
 		this.in = in;
 		ifd = new ImageFileDirectory(in);
 	}
 
 	@SuppressWarnings("unchecked")
-	public ImageFileDirectory load() throws DngProcessorException, IOException, FileNotFoundException, XMPException {
+	public ImageFileDirectory load() throws TiffProcessorException, IOException, FileNotFoundException, XMPException {
 
-		processIfd(ifd);
+		long nextOffset = processIfd(ifd);
 
 		// Second pass: replace offsets to subIFDs with them and load XMP data
 
@@ -67,17 +67,15 @@ public final class ImageFileDirectoryLoader {
 			// FIXME has to be wrong. I never load Vectors, only arrays.
 			if (ifd.get(Tag.SubIFDs) instanceof List)
 				for (long offset : ((List<Long>) ifd.get(Tag.SubIFDs))) subIfds.add(processIfd(offset));
-			else
-				subIfds.add(processIfd((long) ifd.get(Tag.SubIFDs)));
+			else subIfds.add(processIfd((long) ifd.get(Tag.SubIFDs)));
 			ifd.put(Tag.SubIFDs, subIfds);
 		}
 
 		if (ifd.containsKey(Tag.ExifIFD)) {
-			in.seek((long) ifd.get(Tag.ExifIFD));
-			ImageFileDirectory exifIFD = new ImageFileDirectory(in);
-			processIfd(exifIFD);
+			ImageFileDirectory exifIFD = processIfd((long) ifd.get(Tag.ExifIFD));
 			exifIFD.put(Tag.ExifVersion, new String((byte[]) exifIFD.get(Tag.ExifVersion)));
 			ifd.put(Tag.ExifIFD, exifIFD);
+			// TODO process Interoperability(40965) IFD
 		}
 
 		if (ifd.containsKey(Tag.XMP)) {
@@ -92,29 +90,37 @@ public final class ImageFileDirectoryLoader {
 			ifd.put(Tag.XMP, xmpData);
 		}
 
+		/*
+		 * TODO From Digital Negative Specification Version 1.4.0.0, page 13: IFD chains are not supported.
+		 *
+		 * We should have a "strict" mode that throws an exception for DNG, if offset != 0.
+		 */
+		ImageFileDirectory currentIfd = ifd;
+		while (nextOffset != 0) {
+			in.seek(nextOffset);
+			currentIfd.setNext(new ImageFileDirectory(in));
+			nextOffset = processIfd(currentIfd = currentIfd.getNext());
+		}
+
 		return ifd;
 
 	}
 
-	private ImageFileDirectory processIfd(long offset) throws IOException, DngProcessorException {
-		in.seek(offset);
-		ImageFileDirectory subIfd = new ImageFileDirectory(in);
-		processIfd(subIfd);
-		return subIfd;
-	}
-
 	// See TIFF 6.0 Specification, page 14
-	private void processIfd(ImageFileDirectory ifd) throws IOException, DngProcessorException {
-
+	private long processIfd(ImageFileDirectory ifd) throws IOException, TiffProcessorException {
 		int entriescount = in.readSHORT();
 		for (int i = 0; i < entriescount; i++) processIfdEntry(ifd);
-
-		// From Digital Negative Specification Version 1.4.0.0, page 13
-		if (in.readOffset() != 0) throw new DngProcessorException("SubIFD chains are not supported.");
-
+		return in.readOffset();
 	}
 
-	private void processIfdEntry(ImageFileDirectory ifd) throws DngProcessorException, IOException {
+	private ImageFileDirectory processIfd(long offset) throws IOException, TiffProcessorException {
+		in.seek(offset);
+		ImageFileDirectory ifd = new ImageFileDirectory(in);
+		processIfd(ifd);
+		return ifd;
+	}
+
+	private void processIfdEntry(ImageFileDirectory ifd) throws TiffProcessorException, IOException {
 
 		// See TIFF 6.0 Specification, page 14
 
@@ -132,7 +138,7 @@ public final class ImageFileDirectoryLoader {
 		}
 
 		long count = in.readLONG();
-		if (count > 0xFFFFFFFFL) throw new DngProcessorException("java arrays do not support lengths out of the positive integer range: " + count);
+		if (count > 0xFFFFFFFFL) throw new TiffProcessorException("java arrays do not support lengths out of the positive integer range: " + count);
 
 		if (type.size * count > 4) {
 			long offset = in.readOffset();
@@ -147,7 +153,7 @@ public final class ImageFileDirectoryLoader {
 
 	}
 
-	private Object processIfdEntryValue(Type type, int count) throws DngProcessorException, IOException {
+	private Object processIfdEntryValue(Type type, int count) throws TiffProcessorException, IOException {
 		switch (type) {
 			case ASCII    : return in.readASCII(count);
 			case BYTE     : return in.readBYTE(count);

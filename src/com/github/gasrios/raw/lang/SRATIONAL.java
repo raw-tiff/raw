@@ -12,7 +12,7 @@
 
 package com.github.gasrios.raw.lang;
 
-public class SRATIONAL extends DngNumber {
+public class SRATIONAL extends TiffNumber {
 
 	private static final long serialVersionUID = 1021237428351807022L;
 

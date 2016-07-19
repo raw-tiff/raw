@@ -96,6 +96,23 @@ public enum Tag {
 
 	SubIFDs(330),
 	JPEGTables(347),
+
+	/*
+	 * TIFF, page 105
+	 *
+	 * These fields are used in Canon's .CR2 files, *HOWEVER*...
+	 *
+	 * http://www.awaresystems.be/imaging/tiff/tifftags/jpeginterchangeformat.html
+	 *
+	 * Old-style JPEG compression field. TechNote2 invalidates this part of the specification
+	 *
+	 * No new TIFF writer code should ever attempt to use this tag. It is part of an invalidated compression scheme, old-style
+	 * JPEG, that was always unclear to begin with, and next enjoyed many mutualy exclusive implementations. The following
+	 * description is for TIFF reading purposes only. 
+	 */
+	JPEGInterchangeFormat(513),
+	JPEGInterchangeFormatLength(514),
+
 	YCbCrCoefficients(529),
 	YCbCrSubSampling(530),
 	YcbCrPositioning(531),
@@ -141,6 +158,10 @@ public enum Tag {
 
 	DateTimeOriginal(36867),
 	DateTimeDigitized(36868),
+
+	// Exif, page 50
+	ComponentsConfiguration(37121),
+
 	CompressedBitsPerPixel(37122),
 	ShutterSpeedValue(37377),
 	ApertureValue(37378),
@@ -165,9 +186,28 @@ public enum Tag {
 	ExposureIndex(37397),
 	TIFF_EPStandardID(37398),
 	SensingMethod(37399),
+
+	// Exif, page 51
+	MakerNote(37500),
+	UserComment(37510),
+
+	// Exif, page 54
+	SubSecTime(37520),
+
 	SubsecTimeOriginal(37521),
 	SubsecTimeDigitized(37522),
+
+	// Exif, page 49
+	FlashPixVersion(40960),
+
 	ColorSpace(40961),
+
+	// Exif, page 50
+	PixelXDimension(40962),
+	PixelYDimension(40963),
+
+	// Exif, page 32
+	Interoperability(40965),
 
 	// The Exif tags below have the same name as previously declared TIFF/EP tags. Added "Exif" to name start to avoid conflict.
 	ExifFocalPlaneXResolution(41486),
@@ -183,6 +223,11 @@ public enum Tag {
 	LensMake(42035),
 	LensModel(42036),
 	LensSerialNumber(42037),
+
+	// TODO
+	Canon_50648(50648),
+	Canon_50649(50649),
+	Canon_50656(50656),
 
 	// DNG, page 22
 	DNGVersion(50706),
@@ -227,6 +272,9 @@ public enum Tag {
 	 * http://www.barrypearson.co.uk/articles/dng/specification.htm
 	 */
 	DefaultCropSize(50720),
+
+	// TODO
+	Canon_50752(50752),
 
 	/*
 	 * DNG, page 31
@@ -334,6 +382,11 @@ public enum Tag {
 	CurrentICCProfile(50833),
 	CurrentPreProfileMatrix(50834),
 	ColorimetricReference(50879),
+
+	// TODO
+	Canon_50885(50885),
+	Canon_50908(50908),
+
 	CameraCalibrationSignature(50931),
 	ProfileCalibrationSignature(50932),
 	ExtraCameraProfiles(50933),

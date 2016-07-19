@@ -11,7 +11,7 @@
  */
 
 /*
- * This class makes all transformations deemed too complex to be at org.yoyo.dng.data.ImageFileDirectoryLoader when processing
+ * This class makes all transformations deemed too complex to be at com.github.gasrios.raw.data.ImageFileDirectoryLoader when processing
  * the high resolution image IFD:
  *
  * 1. Reads image strips and converts them to a width X height pixel matrix;
@@ -20,7 +20,7 @@
  *
  * 3. Puts all information spread around several IFDs inside the same data structure.
  *
- * This pretty much ends all the dirty work needed to read the DNG file and makes its information available to people whose
+ * This pretty much ends all the dirty work needed to read the TIFF file and makes its information available to people whose
  * business is doing actual photo editing. Just extend this class and consume the info in attributes image and imageData.
  *
  * TODO assuming Orientation = 1
@@ -39,12 +39,12 @@ import java.util.Map;
 import com.github.gasrios.raw.data.Illuminant;
 import com.github.gasrios.raw.data.ImageFileDirectory;
 import com.github.gasrios.raw.data.Tag;
-import com.github.gasrios.raw.lang.DngProcessorException;
+import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.lang.RATIONAL;
 import com.github.gasrios.raw.lang.SRATIONAL;
 
-public class LoadHighResolutionImage extends AbstractDngProcessor {
+public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
 	private static final Map<Integer, Illuminant> ILLUMINANTS = new HashMap<Integer, Illuminant>();
 	static { for (Illuminant illuminant: Illuminant.values()) ILLUMINANTS.put(illuminant.value, illuminant); }
@@ -64,7 +64,7 @@ public class LoadHighResolutionImage extends AbstractDngProcessor {
 		data.put(Tag.ForwardMatrix2, ifd.get(Tag.ForwardMatrix2));
 	}
 
-	@Override public void highResolutionIfd(ImageFileDirectory ifd) throws DngProcessorException {
+	@Override public void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
 
 		data.put(Tag.BitsPerSample, ifd.get(Tag.BitsPerSample));
 		data.put(Tag.SamplesPerPixel, ifd.get(Tag.SamplesPerPixel));
@@ -230,11 +230,11 @@ public class LoadHighResolutionImage extends AbstractDngProcessor {
 			} else if (bitsPerSample[i] <= 16) {
 				short[] sample = new short[2];
 				System.arraycopy(strip, offset, sample, 0, 2);
-				pixel[i] = com.github.gasrios.raw.io.DngInputStream.toInt(sample, byteOrder)/65535D;
+				pixel[i] = com.github.gasrios.raw.io.TiffInputStream.toInt(sample, byteOrder)/65535D;
 			} else if (bitsPerSample[i] <= 32) {
 				short[] sample = new short[4];
 				System.arraycopy(strip, offset, sample, 0, 4);
-				pixel[i] = com.github.gasrios.raw.io.DngInputStream.toLong(sample, byteOrder)/4294967295D;
+				pixel[i] = com.github.gasrios.raw.io.TiffInputStream.toLong(sample, byteOrder)/4294967295D;
 			}
 			offset += 1 + (bitsPerSample[i]-1)/8;
 		}

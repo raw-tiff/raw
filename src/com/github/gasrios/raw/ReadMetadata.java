@@ -18,15 +18,15 @@ import java.util.Map;
 
 import com.github.gasrios.raw.data.ImageFileDirectory;
 import com.github.gasrios.raw.data.Tag;
-import com.github.gasrios.raw.processor.AbstractDngProcessor;
-import com.github.gasrios.raw.processor.DngProcessorEngine;
+import com.github.gasrios.raw.processor.AbstractTiffProcessor;
+import com.github.gasrios.raw.processor.TiffProcessorEngine;
 
-public class ReadMetadata extends AbstractDngProcessor {
+public class ReadMetadata extends AbstractTiffProcessor {
 
-	private static final boolean IGNORE_UNKNOWN_TAGS = true;
+	private static final boolean IGNORE_UNKNOWN_TAGS = false;
 
 	public static void main(String[] args) throws Exception {
-		(new DngProcessorEngine(new FileInputStream(args[0]), new ReadMetadata(), IGNORE_UNKNOWN_TAGS)).run();
+		(new TiffProcessorEngine(new FileInputStream(args[0]), new ReadMetadata(), IGNORE_UNKNOWN_TAGS)).run();
 	}
 
 	@Override public void ifd(ImageFileDirectory ifd) { System.out.println(); }
@@ -36,6 +36,8 @@ public class ReadMetadata extends AbstractDngProcessor {
 	@Override public void highResolutionIfd(ImageFileDirectory ifd) { System.out.println("\nHigh Resolution"); }
 
 	@Override public void exifIfd(ImageFileDirectory ifd) { System.out.println("\nExif"); }
+
+	@Override public void nextIfd(ImageFileDirectory ifd) { System.out.println("\nNext"); }
 
 	@Override public void xmp(Map<String, String> xmp) { System.out.println("\nXMP\n"); }
 

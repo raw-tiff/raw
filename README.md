@@ -2,7 +2,9 @@
 
 This is not a production ready raw reader, just a personal project I started while studying digital image processing. If you need a complete, fully functional library, check dcraw out: https://www.cybercom.net/~dcoffin/dcraw/
 
-Currently the only format supported is uncompressed, linear (demosaiced) Adobe DNG. I decided to support DNG first because, unlike proprietary formats such as Canon's CR2 or Nikon's .NEF, DNG is open and has its specification publicly available. Also, virtually all widely used raw formats are TIFF-based, like DNG, so if you can read it, you are more than halfway done reading any raw file format.
+Currently the only format supported is uncompressed, linear (demosaiced) Adobe DNG. Reading Canon's .CR2 metadata is also supported, but should not be considered 100% reliable yet.
+
+I decided to support DNG first because, unlike proprietary formats such as Canon's CR2 or Nikon's .NEF, DNG is open and has its specification publicly available. Also, virtually all widely used raw formats are TIFF-based, like DNG, so if you can read it, you are more than halfway done reading any raw file format.
 
 You can use Adobe Camera Raw and DNG Converter to convert your raw files to DNG: https://www.adobe.com/support/downloads/product.jsp?product=106&platform=Windows
 
@@ -20,7 +22,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 ** Before you begin **
 
-Keep in mind DNG is an evolution of TIFF, a decades old file format that has been receiving extensions for as long as it exists. It's full of idiosyncrasies and I strongly encourage you to read the following specifications before proceeding:
+Keep in mind TIFF is a decades old file format that has been receiving extensions for as long as has existed. It's full of idiosyncrasies and I strongly encourage you to read the following specifications before proceeding:
 
 - TIFF Revision 6.0 Final - June 3, 1992
 - TIFF Technical Note 1: TIFF Trees
@@ -37,42 +39,42 @@ At the highest level code is split in two parts: "Core" and "Non Core". "Core" c
 
 ** Core **
 
-** DNG low level reader (com.github.gasrios.raw.io.DngInputStream) **
+** Low level reader **
 
-DngInputStream does two things:
+Class com.github.gasrios.raw.io.TiffInputStream. It does two things:
 
-1. Provides easy random reading access to content: DNG headers are processed linearly but there is a lot of jumping around involved in extracting data from file bodies.
+1. Provides easy random reading access to content: TIFF headers are processed linearly but there is a lot of jumping around involved in extracting data from file bodies.
 2. Provides methods that convert from TIFF primitive types to Java types at read time.
 
 In short it encapsulates the direct handling of the file and provides higher level classes a more abstract view of the harsh reality of TIFF.
 
-DngInputStream extends java.io.BufferedInputStream, not java.io.RandomAccessFile. The RandomAccessFile based implementation was about four times slower and less than fifty lines of code were needed to emulate what was needed of its functionality.
+TiffInputStream extends java.io.BufferedInputStream, not java.io.RandomAccessFile. The RandomAccessFile based implementation was about four times slower and less than fifty lines of code were needed to emulate what was needed of its functionality.
 
-** Intermediary level representation (classes com.github.gasrios.raw.data.ImageFileDirectoryLoader and com.github.gasrios.raw.data.ImageFileDirectory) **
+** Intermediary level representation **
 
-ImageFileDirectoryLoader encapsulates all the logic used to extract DNG info from file while  ImageFileDirectory holds all information once it is loaded.
+Class com.github.gasrios.raw.data.ImageFileDirectoryLoader, which encapsulates all the logic used to extract TIFF info, and class com.github.gasrios.raw.data.ImageFileDirectory, which holds the information once it is loaded.
 
-** Processor Engine (com.github.gasrios.raw.processor.DngProcessorEngine and com.github.gasrios.raw.processor.DngProcessor) **
+** Processor Engine **
 
-DngProcessorEngine uses ImageFileDirectoryLoader to load a ImageFileDirectory then navigates its contents and calls the methods defined in DngProcessor. You implement this interface (or extend the abstract class com.github.gasrios.raw.processor.AbstractDngProcessor which provides empty implementations of methods you do not care about) to define the actions you want performed.
+Class com.github.gasrios.raw.processor.TiffProcessorEngine uses ImageFileDirectoryLoader to load a ImageFileDirectory, then navigates its contents and calls the methods defined in class com.github.gasrios.raw.processor.TiffProcessor. You implement this interface (or extend the abstract class com.github.gasrios.raw.processor.AbstractTiffProcessor, which provides empty implementations of methods you do not care about) to define the actions you want performed.
 
 ** Non Core **
 
 "Non core" is concerned with the useful stuff.
 
-Class com.github.gasrios.raw.LoadHighResolutionImage provides a DngProcessor that will load the image and its metadata then convert it to an agnostic format. Image editors will extend it, implement method end() and then consume protected attributes "imageData" and "image".
+Class com.github.gasrios.raw.LoadHighResolutionImage provides a TiffProcessor that will load the image and its metadata, then convert them to an agnostic format. Image editors will extend it, implement method end() and then consume protected attributes "imageData" and "image".
 
 ** Understanding the core **
 
-	com.github.gasrios.raw.processor.DngProcessorEngine
-		uses com.github.gasrios.raw.processor.DngProcessor
+	com.github.gasrios.raw.processor.TiffProcessorEngine
+		uses com.github.gasrios.raw.processor.TiffProcessor
 			implemented by com.github.gasrios.raw.processor.AbstractDngProcessor
 		uses com.github.gasrios.raw.data.ImageFileDirectoryLoader
 			uses com.github.gasrios.raw.data.Tag
 			uses com.github.gasrios.raw.data.Type
-			uses com.github.gasrios.raw.io.DngInputStream
+			uses com.github.gasrios.raw.io.TiffInputStream
 
-	com.github.gasrios.raw.lang.DngNumber
+	com.github.gasrios.raw.lang.TiffNumber
 		extended by com.github.gasrios.raw.lang.RATIONAL
 		extended by com.github.gasrios.raw.lang.SRATIONAL
 
