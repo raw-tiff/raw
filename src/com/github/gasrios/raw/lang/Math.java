@@ -16,6 +16,88 @@ public final class Math {
 
 	public static double normalize(double b, double m, double t) { return m < b? b : m > t? t : (m-b)/(t-b); }
 
+	/*
+	 * Color space conversions.
+	 *
+	 * FIXME need to correct rounding mistakes too?
+	 *
+	 * A note on image editing and CIE color spaces
+	 *
+	 * Not all CIE color spaces are useful when editing images. In fact, surprisingly few are. In order to effectively manipulate
+	 * an image you need a color space in which luminance, saturation and hue are linearly independent from one another, a condition
+	 * usually not met.
+	 *
+	 * Let's examine for example the case of CIE 1931 XYZ. From https://en.wikipedia.org/wiki/CIE_1931_color_space#Meaning_of_X.2C_Y.2C_and_Z
+	 *
+	 * "When judging the relative luminance (brightness) of different colors in well-lit situations, humans tend to perceive
+	 * light within the green parts of the spectrum as brighter than red or blue light of equal power. The luminosity function
+	 * that describes the perceived brightnesses of different wavelengths is thus roughly analogous to the spectral sensitivity
+	 * of M cones. The CIE model capitalises on this fact by defining Y as luminance."
+	 *
+	 * Y may be a decent approximation of luminance in CIE 1931 XYZ, but it also a measure of how "green" a color is. Manipulating
+	 * Y will affect all hues in the image.
+	 *
+	 * Similar problems happen with CIE 1976 (L*, u*, v*) and its LChuv variant: if you increase L* the image is desaturated.
+	 *
+	 * (See https://en.wikipedia.org/wiki/CIELUV, in particular session "Cylindrical representation (CIELCH)")
+	 *
+	 * One option is to replace chroma with saturation (C/L) in LChuv. The resulting LSH color space is not formally specified
+	 * but seems closer to providing linearly independent dimensions than any other CIE color space.
+	 *
+	 * CIE 1976 (L*, a*, b*) was not tested and does not look promising, given it has no saturation definition.
+	 */
+
+	// http://en.wikipedia.org/wiki/CIELUV#The_forward_transformation
+	public static double[] xyz2luv(double[] xyz) {
+
+		double d = xyz[0]+15D*xyz[1]+3D*xyz[2];
+
+		if (d == 0D) return new double[] { 0D, 0D, 0D };
+
+		double L = xyz[1] > ε? 116D*java.lang.Math.pow(xyz[1], 1D/3D)-16D : κ*xyz[1];
+		return new double[] { L, 13D*L*((4D*xyz[0]/d)-un), 13D*L*((9D*xyz[1]/d)-vn) };
+
+	}
+
+	// http://en.wikipedia.org/wiki/CIELUV#The_reverse_transformation
+	public static double[] luv2xyz(double[] luv) {
+
+		if (luv[0] == 0D) return new double[] { 0D, 0D, 0D };
+
+		double u = luv[1]/(13D*luv[0])+un;
+		double v = luv[2]/(13D*luv[0])+vn;
+		double Y = luv[0] > 8D? java.lang.Math.pow((luv[0]+16D)/116D, 3D) : luv[0]*invκ;
+
+		return new double[] { Y*(9D*u)/(4D*v), Y, Y*(12D-3D*u-20D*v)/(4D*v) };
+
+	}
+
+	// http://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation
+	public static double[] luv2lsh(double[] luv) {
+		return (luv[0] == 0D)?
+			new double[] { 0D, 0D, 0D }:
+			new double[] { luv[0], java.lang.Math.pow(java.lang.Math.pow(luv[1], 2) + java.lang.Math.pow(luv[2], 2), .5D)/luv[0], java.lang.Math.atan2(luv[2], luv[1]) };
+	}
+
+	public static double[] lsh2luv(double[] lsh) {
+		return new double[] { lsh[0], lsh[0]*lsh[1]*java.lang.Math.cos(lsh[2]), lsh[0]*lsh[1]*java.lang.Math.sin(lsh[2]) };
+	}
+
+	static private final double
+
+		// u,v coordinates for D50 reference white. See ftp://law.resource.org/pub/us/cfr/ibr/003/cie.15.2004.tables.xls
+		un = .209159684D,
+		vn = .488082649D,
+
+		// See http://www.brucelindbloom.com/index.html?LContinuity.html
+		ε = 216D/24389D,
+		κ = 24389D/27D,
+		invκ = 27D/24389D;
+
+	/*
+	 * Matrix operations
+	 */
+
 	public static double[] multiply(double[][] m, double[] v) {
 		double[] m2 = new double[m.length];
 		for (int i = 0; i < m2.length; i++) for (int j = 0; j < v.length; j++) m2[i] += m[i][j]* v[j];
