@@ -75,6 +75,7 @@ public final class ImageFileDirectoryLoader {
 
 			ImageFileDirectory exifIfd = processIfd((long) ifd.get(Tag.ExifIFD));
 			exifIfd.put(Tag.ExifVersion, new String((byte[]) exifIfd.get(Tag.ExifVersion)));
+			if (exifIfd.containsKey(Tag.FlashPixVersion)) exifIfd.put(Tag.FlashPixVersion, new String((byte[]) exifIfd.get(Tag.FlashPixVersion)));
 			ifd.put(Tag.ExifIFD, exifIfd);
 
 			if (exifIfd.containsKey(Tag.Interoperability)) {
