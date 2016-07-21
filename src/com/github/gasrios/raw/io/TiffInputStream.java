@@ -53,17 +53,22 @@ import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.github.gasrios.raw.data.InteroperabilityTag;
 import com.github.gasrios.raw.data.Tag;
 import com.github.gasrios.raw.data.Type;
-import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.lang.RATIONAL;
 import com.github.gasrios.raw.lang.SRATIONAL;
+import com.github.gasrios.raw.lang.TiffProcessorException;
 
 public class TiffInputStream extends BufferedInputStream {
 
 	private static final Map<Integer, Tag> TAGS = new HashMap<Integer, Tag>();
+	private static final Map<Integer, InteroperabilityTag> INTEROPERABILITY_TAGS = new HashMap<Integer, InteroperabilityTag>();
 
-	static { for (Tag tag: Tag.values()) TAGS.put(tag.number, tag); }
+	static {
+		for (Tag tag: Tag.values()) TAGS.put(tag.number, tag);
+		for (InteroperabilityTag tag: InteroperabilityTag.values()) INTEROPERABILITY_TAGS.put(tag.number, tag);
+	}
 
 	public static synchronized int toInt(short[] buffer, ByteOrder byteOrder) {
 		return byteOrder.equals(ByteOrder.LITTLE_ENDIAN)? (buffer[1] << 8) + buffer[0] : (buffer[0] << 8) + buffer[1];
@@ -308,6 +313,13 @@ public class TiffInputStream extends BufferedInputStream {
 		if (TAGS.containsKey(tag)) return TAGS.get(tag);
 		else if (ignoreUnknownTags) return Tag.Unknown;
 		else throw new TiffProcessorException("Unknown tag #" + tag);
+	}
+
+	public synchronized InteroperabilityTag readInteroperabilityTag() throws TiffProcessorException, IOException {
+		int tag = readSHORT();
+		if (INTEROPERABILITY_TAGS.containsKey(tag)) return INTEROPERABILITY_TAGS.get(tag);
+		else if (ignoreUnknownTags) return InteroperabilityTag.Unknown;
+		else throw new TiffProcessorException("Unknown interoperability tag #" + tag);
 	}
 
 	public synchronized Type readType() throws TiffProcessorException, IOException {

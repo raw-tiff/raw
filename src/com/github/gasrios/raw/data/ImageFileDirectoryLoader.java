@@ -79,10 +79,10 @@ public final class ImageFileDirectoryLoader {
 			ifd.put(Tag.ExifIFD, exifIfd);
 
 			if (exifIfd.containsKey(Tag.Interoperability)) {
-				ImageFileDirectory interoperabilityIFD = processIfd((long) exifIfd.get(Tag.Interoperability));
+				ImageFileDirectory interoperabilityIFD = processInteroperabilityIfd((long) exifIfd.get(Tag.Interoperability));
 				interoperabilityIFD.put(
-					Tag.InteroperabilityVersion,
-					new String((byte[]) interoperabilityIFD.get(Tag.InteroperabilityVersion)));
+					InteroperabilityTag.InteroperabilityVersion,
+					new String((byte[]) interoperabilityIFD.get(InteroperabilityTag.InteroperabilityVersion)));
 				exifIfd.put(Tag.Interoperability, interoperabilityIFD);
 			}
 
@@ -116,10 +116,14 @@ public final class ImageFileDirectoryLoader {
 
 	}
 
-	// See TIFF 6.0 Specification, page 14
 	private long processIfd(ImageFileDirectory ifd) throws IOException, TiffProcessorException {
 		int entriescount = in.readSHORT();
-		for (int i = 0; i < entriescount; i++) processIfdEntry(ifd);
+		for (int i = 0; i < entriescount; i++) {
+			Tag tag = in.readTag();
+			if (tag.equals(Tag.Unknown)) {
+				in.skip(10);
+			} else processIfdEntry(ifd, tag);
+		}
 		return in.readOffset();
 	}
 
@@ -130,15 +134,25 @@ public final class ImageFileDirectoryLoader {
 		return ifd;
 	}
 
-	private void processIfdEntry(ImageFileDirectory ifd) throws TiffProcessorException, IOException {
-
-		// See TIFF 6.0 Specification, page 14
-
-		Tag tag = in.readTag();
-		if (tag.equals(Tag.Unknown)) {
-			in.skip(10);
-			return;
+	private long processInteroperabilityIfd(ImageFileDirectory ifd) throws IOException, TiffProcessorException {
+		int entriescount = in.readSHORT();
+		for (int i = 0; i < entriescount; i++) {
+			InteroperabilityTag tag = in.readInteroperabilityTag();
+			if (tag.equals(Tag.Unknown)) {
+				in.skip(10);
+			} else processIfdEntry(ifd, tag);
 		}
+		return in.readOffset();
+	}
+
+	private ImageFileDirectory processInteroperabilityIfd(long offset) throws IOException, TiffProcessorException {
+		in.seek(offset);
+		ImageFileDirectory ifd = new ImageFileDirectory(in);
+		processInteroperabilityIfd(ifd);
+		return ifd;
+	}
+
+	private void processIfdEntry(ImageFileDirectory ifd, Tag tag) throws TiffProcessorException, IOException {
 
 		/*
 		 * See TIFF 6.0 Specification, page 16

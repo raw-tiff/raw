@@ -11,6 +11,16 @@
  */
 
 /*
+ * This used to be an enum until the moment I found out the numeric identifiers were not unique for all scopes (which may or
+ * may not be a violation of the TIFF specification letter, but surely is a violation of its spirit). For example, 1 can be
+ * the "InteroperabilityIndex" of an Interoperability IFD, or "GPSLatitudeRef", inside a GPS IFD.
+ *
+ * By then the simplest way to account for that was:
+ *
+ * 1. Change Tag from enum to class (as enum cannot be extended);
+ * 2. Extend Tag to create a separated scope for each anomalous case;
+ * 3. Make the new class Tag behave like an enum, so the existing code would not break.
+ *
  * Tags obtained from the following references:
  *
  *		TIFF Revision 6.0 Final - June 3, 1992
@@ -26,98 +36,91 @@
 
 package com.github.gasrios.raw.data;
 
-public enum Tag {
+public class Tag implements Comparable<Tag> {
 
-	Unknown(-1),
+	public final int number;
 
-	/*
-	 * Exif, page 83. See also page 32.
-	 *
-	 * This tag and InteroperabilityVersion below are not unique in all contexts; as they only occur inside an Interoperability
-	 * IFD and there they happen to be unique, there are no consistency issues, but in the future when support to GPS IFDs
-	 * is added there will be trouble.
-	 */
-	InteroperabilityIndex(1),
+	private final String name;
 
-	/*
-	 * Exif, page 32.
-	 *
-	 * No documentation referencing this tag was found yet but most people online call it "InteroperabilityVersion" and read
-	 * its value as an array of ASCII chars (at least for Canon's .CR2, its type is UNDEFINED), so I am adopting the same
-	 * convention.
-	 *
-	 * This tag and InteroperabilityIndex above are not unique in all contexts; as they only occur inside an Interoperability
-	 * IFD and there they happen to be unique, there are no consistency issues, but in the future when support to GPS IFDs
-	 * is added there will be trouble.
-	 */
-	InteroperabilityVersion(2),
+	Tag(String name, int number) {
+		this.name = name;
+		this.number = number;
+	}
+
+	public static Tag[] values() {return values; }
+
+	@Override public final int compareTo(Tag tag) { return number - tag.number; }
+
+	@Override public final String toString() { return name; }
+
+	public static final Tag	Unknown = new Tag("Unknown", -1);
 
 	// DNG, page 18
-	NewSubFileType(254),
+	public static final Tag	NewSubFileType = new Tag("NewSubFileType", 254);
 
 	// TIFF, page 18
-	ImageWidth(256),
+	public static final Tag	ImageWidth = new Tag("ImageWidth", 256);
 
 	// TIFF, page 18
-	ImageLength(257),
+	public static final Tag	ImageLength = new Tag("ImageLength", 257);
 
 	// TIFF, page 29
-	BitsPerSample(258),
+	public static final Tag	BitsPerSample = new Tag("BitsPerSample", 258);
 
 	// DNG, page 19
-	Compression(259),
+	public static final Tag	Compression = new Tag("Compression", 259);
 
 	// DNG, page 20
-	PhotometricInterpretation(262),
+	public static final Tag	PhotometricInterpretation = new Tag("PhotometricInterpretation", 262);
 
-	ImageDescription(270),
-	Make(271),
-	Model(272),
+	public static final Tag	ImageDescription = new Tag("ImageDescription", 270);
+	public static final Tag	Make = new Tag("Make", 271);
+	public static final Tag	Model = new Tag("Model", 272);
 
 	// TIFF, page 19
-	StripOffsets(273),
+	public static final Tag	StripOffsets = new Tag("StripOffsets", 273);
 
 	/*
 	 * TIFF, page 36
 	 * TIFF/EP, page 23
 	 * DNG, page 20
 	 */
-	Orientation(274),
+	public static final Tag	Orientation = new Tag("Orientation", 274);
 
 	// TIFF, page 39
-	SamplesPerPixel(277),
+	public static final Tag	SamplesPerPixel = new Tag("SamplesPerPixel", 277);
 
 	// TIFF, page 19
-	RowsPerStrip(278),
+	public static final Tag	RowsPerStrip = new Tag("RowsPerStrip", 278);
 
 	// TIFF, page 19
-	StripByteCounts(279),
+	public static final Tag	StripByteCounts = new Tag("StripByteCounts", 279);
 
-	XResolution(282),
-	YResolution(283),
+	public static final Tag	XResolution = new Tag("XResolution", 282);
+	public static final Tag	YResolution = new Tag("YResolution", 283);
 
 	// TIFF, page 19
-	PlanarConfiguration(284),
+	public static final Tag	PlanarConfiguration = new Tag("PlanarConfiguration", 284);
 
-	ResolutionUnit(296),
-	Software(305),
-	DateTime(306),
-	Artist(315),
+	public static final Tag	ResolutionUnit = new Tag("ResolutionUnit", 296);
+	public static final Tag	Software = new Tag("Software", 305);
+	public static final Tag	DateTime = new Tag("DateTime", 306);
+	public static final Tag	Artist = new Tag("Artist", 315);
 
 	// TIFF, page 67
-	TileWidth(322),
+	public static final Tag	TileWidth = new Tag("TileWidth", 322);
 
 	// TIFF, page 67
-	TileLength(323),
+	public static final Tag	TileLength = new Tag("TileLength", 323);
 
 	// TIFF, page 68
-	TileOffsets(324),
+	public static final Tag	TileOffsets = new Tag("TileOffsets", 324);
 
 	// TIFF, page 68
-	TileByteCounts(325),
+	public static final Tag	TileByteCounts = new Tag("TileByteCounts", 325);
 
-	SubIFDs(330),
-	JPEGTables(347),
+	public static final Tag	SubIFDs = new Tag("SubIFDs", 330);
+	public static final Tag	JPEGTables = new Tag("JPEGTables", 347);
 
 	/*
 	 * TIFF, page 105
@@ -132,348 +135,376 @@ public enum Tag {
 	 * JPEG, that was always unclear to begin with, and next enjoyed many mutualy exclusive implementations. The following
 	 * description is for TIFF reading purposes only. 
 	 */
-	JPEGInterchangeFormat(513),
-	JPEGInterchangeFormatLength(514),
+	public static final Tag	JPEGInterchangeFormat = new Tag("JPEGInterchangeFormat", 513);
+	public static final Tag	JPEGInterchangeFormatLength = new Tag("JPEGInterchangeFormatLength", 514);
 
-	YCbCrCoefficients(529),
-	YCbCrSubSampling(530),
-	YcbCrPositioning(531),
-	ReferenceBlackWhite(532),
-
-	// DNG, page 14
-	XMP(700),
-
-	// TIFF/EP, page 26
-	CFARepeatPatternDim(33421),
-
-	// TIFF/EP, page 26
-	CFAPattern(33422),
-
-	BatteryLevel(33423),
-	Copyright(33432),
-	ExposureTime(33434),
-	FNumber(33437),
-	IPTC_NAA(33723),
+	public static final Tag	YCbCrCoefficients = new Tag("YCbCrCoefficients", 529);
+	public static final Tag	YCbCrSubSampling = new Tag("YCbCrSubSampling", 530);
+	public static final Tag	YcbCrPositioning = new Tag("YcbCrPositioning", 531);
+	public static final Tag	ReferenceBlackWhite = new Tag("ReferenceBlackWhite", 532);
 
 	// DNG, page 14
-	ExifIFD(34665),
+	public static final Tag	XMP = new Tag("XMP", 700);
+
+	// TIFF/EP, page 26
+	public static final Tag	CFARepeatPatternDim = new Tag("CFARepeatPatternDim", 33421);
+
+	// TIFF/EP, page 26
+	public static final Tag	CFAPattern = new Tag("CFAPattern", 33422);
+
+	public static final Tag	BatteryLevel = new Tag("BatteryLevel", 33423);
+	public static final Tag	Copyright = new Tag("Copyright", 33432);
+	public static final Tag	ExposureTime = new Tag("ExposureTime", 33434);
+	public static final Tag	FNumber = new Tag("FNumber", 33437);
+	public static final Tag	IPTC_NAA = new Tag("IPTC_NAA", 33723);
+
+	// DNG, page 14
+	public static final Tag	ExifIFD = new Tag("ExifIFD", 34665);
 
 	/*
 	 * TIFF/EP, page 48
 	 * ICC, page 58
 	 */
-	InterColorProfile(34675),
+	public static final Tag	InterColorProfile = new Tag("InterColorProfile", 34675);
 
-	ExposureProgram(34850),
-	SpectralSensitivity(34852),
-	GPSInfo(34853),
-	ISOSpeedRatings(34855),
-	OECF(34856),
-	Interlace(34857),
-	TimeZoneOffset(34858),
-	SelfTimerMode(34859),
-	SensitivityType(34864),
-	RecommendedExposureIndex(34866),
+	public static final Tag	ExposureProgram = new Tag("ExposureProgram", 34850);
+	public static final Tag	SpectralSensitivity = new Tag("SpectralSensitivity", 34852);
+	public static final Tag	GPSInfo = new Tag("GPSInfo", 34853);
+	public static final Tag	ISOSpeedRatings = new Tag("ISOSpeedRatings", 34855);
+	public static final Tag	OECF = new Tag("OECF", 34856);
+	public static final Tag	Interlace = new Tag("Interlace", 34857);
+	public static final Tag	TimeZoneOffset = new Tag("TimeZoneOffset", 34858);
+	public static final Tag	SelfTimerMode = new Tag("SelfTimerMode", 34859);
+	public static final Tag	SensitivityType = new Tag("SensitivityType", 34864);
+	public static final Tag	RecommendedExposureIndex = new Tag("RecommendedExposureIndex", 34866);
 
 	// Exif, page 49
-	ExifVersion(36864),
+	public static final Tag	ExifVersion = new Tag("ExifVersion", 36864);
 
-	DateTimeOriginal(36867),
-	DateTimeDigitized(36868),
+	public static final Tag	DateTimeOriginal = new Tag("DateTimeOriginal", 36867);
+	public static final Tag	DateTimeDigitized = new Tag("DateTimeDigitized", 36868);
 
 	// Exif, page 50
-	ComponentsConfiguration(37121),
+	public static final Tag	ComponentsConfiguration = new Tag("ComponentsConfiguration", 37121);
 
-	CompressedBitsPerPixel(37122),
-	ShutterSpeedValue(37377),
-	ApertureValue(37378),
-	BrightnessValue(37379),
-	ExposureBiasValue(37380),
-	MaxApertureValue(37381),
-	SubjectDistance(37382),
-	MeteringMode(37383),
-	LightSource(37384),
-	Flash(37385),
-	FocalLength(37386),
-	FlashEnergy(37387),
-	SpatialFrequencyResponse(37388),
-	Noise(37389),
-	FocalPlaneXResolution(37390),
-	FocalPlaneYResolution(37391),
-	FocalPlaneResolutionUnit(37392),
-	ImageNumber(37393),
-	SecurityClassification(37394),
-	ImageHistory(37395),
-	SubjectLocation(37396),
-	ExposureIndex(37397),
-	TIFF_EPStandardID(37398),
-	SensingMethod(37399),
+	public static final Tag	CompressedBitsPerPixel = new Tag("CompressedBitsPerPixel", 37122);
+	public static final Tag	ShutterSpeedValue = new Tag("ShutterSpeedValue", 37377);
+	public static final Tag	ApertureValue = new Tag("ApertureValue", 37378);
+	public static final Tag	BrightnessValue = new Tag("BrightnessValue", 37379);
+	public static final Tag	ExposureBiasValue = new Tag("ExposureBiasValue", 37380);
+	public static final Tag	MaxApertureValue = new Tag("MaxApertureValue", 37381);
+	public static final Tag	SubjectDistance = new Tag("SubjectDistance", 37382);
+	public static final Tag	MeteringMode = new Tag("MeteringMode", 37383);
+	public static final Tag	LightSource = new Tag("LightSource", 37384);
+	public static final Tag	Flash = new Tag("Flash", 37385);
+	public static final Tag	FocalLength = new Tag("FocalLength", 37386);
+	public static final Tag	FlashEnergy = new Tag("FlashEnergy", 37387);
+	public static final Tag	SpatialFrequencyResponse = new Tag("SpatialFrequencyResponse", 37388);
+	public static final Tag	Noise = new Tag("Noise", 37389);
+	public static final Tag	FocalPlaneXResolution = new Tag("FocalPlaneXResolution", 37390);
+	public static final Tag	FocalPlaneYResolution = new Tag("FocalPlaneYResolution", 37391);
+	public static final Tag	FocalPlaneResolutionUnit = new Tag("FocalPlaneResolutionUnit", 37392);
+	public static final Tag	ImageNumber = new Tag("ImageNumber", 37393);
+	public static final Tag	SecurityClassification = new Tag("SecurityClassification", 37394);
+	public static final Tag	ImageHistory = new Tag("ImageHistory", 37395);
+	public static final Tag	SubjectLocation = new Tag("SubjectLocation", 37396);
+	public static final Tag	ExposureIndex = new Tag("ExposureIndex", 37397);
+	public static final Tag	TIFF_EPStandardID = new Tag("TIFF_EPStandardID", 37398);
+	public static final Tag	SensingMethod = new Tag("SensingMethod", 37399);
 
 	// Exif, page 51
-	MakerNote(37500),
-	UserComment(37510),
+	public static final Tag	MakerNote = new Tag("MakerNote", 37500);
+	public static final Tag	UserComment = new Tag("UserComment", 37510);
 
 	// Exif, page 54
-	SubSecTime(37520),
+	public static final Tag	SubSecTime = new Tag("SubSecTime", 37520);
 
-	SubsecTimeOriginal(37521),
-	SubsecTimeDigitized(37522),
+	public static final Tag	SubsecTimeOriginal = new Tag("SubsecTimeOriginal", 37521);
+	public static final Tag	SubsecTimeDigitized = new Tag("SubsecTimeDigitized", 37522);
 
 	// Exif, page 49
-	FlashPixVersion(40960),
+	public static final Tag	FlashPixVersion = new Tag("FlashPixVersion", 40960);
 
-	ColorSpace(40961),
+	public static final Tag	ColorSpace = new Tag("ColorSpace", 40961);
 
 	// Exif, page 50
-	PixelXDimension(40962),
-	PixelYDimension(40963),
+	public static final Tag	PixelXDimension = new Tag("PixelXDimension", 40962);
+	public static final Tag	PixelYDimension = new Tag("PixelYDimension", 40963);
 
 	// Exif, page 32
-	Interoperability(40965),
+	public static final Tag	Interoperability = new Tag("Interoperability", 40965);
 
 	// The Exif tags below have the same name as previously declared TIFF/EP tags. Added "Exif" to name start to avoid conflict.
-	ExifFocalPlaneXResolution(41486),
-	ExifFocalPlaneYResolution(41487),
-	ExifFocalPlaneResolutionUnit(41488),
+	public static final Tag	ExifFocalPlaneXResolution = new Tag("ExifFocalPlaneXResolution", 41486);
+	public static final Tag	ExifFocalPlaneYResolution = new Tag("ExifFocalPlaneYResolution", 41487);
+	public static final Tag	ExifFocalPlaneResolutionUnit = new Tag("ExifFocalPlaneResolutionUnit", 41488);
 
-	CustomRendered(41985),
-	ExposureMode(41986),
-	WhiteBalance(41987),
-	SceneCaptureType(41990),
-	BodySerialNumber(42033),
-	LensSpecification(42034),
-	LensMake(42035),
-	LensModel(42036),
-	LensSerialNumber(42037),
+	public static final Tag	CustomRendered = new Tag("CustomRendered", 41985);
+	public static final Tag	ExposureMode = new Tag("ExposureMode", 41986);
+	public static final Tag	WhiteBalance = new Tag("WhiteBalance", 41987);
+	public static final Tag	SceneCaptureType = new Tag("SceneCaptureType", 41990);
+	public static final Tag	BodySerialNumber = new Tag("BodySerialNumber", 42033);
+	public static final Tag	LensSpecification = new Tag("LensSpecification", 42034);
+	public static final Tag	LensMake = new Tag("LensMake", 42035);
+	public static final Tag	LensModel = new Tag("LensModel", 42036);
+	public static final Tag	LensSerialNumber = new Tag("LensSerialNumber", 42037);
 
 	// TODO
-	Canon_50648(50648),
-	Canon_50649(50649),
-	Canon_50656(50656),
+	public static final Tag	Canon_50648 = new Tag("Canon_50648", 50648);
+	public static final Tag	Canon_50649 = new Tag("Canon_50649", 50649);
+	public static final Tag	Canon_50656 = new Tag("Canon_50656", 50656);
 
 	// DNG, page 22
-	DNGVersion(50706),
+	public static final Tag	DNGVersion = new Tag("DNGVersion", 50706);
 
 	// DNG, page 22
-	DNGBackwardVersion(50707),
+	public static final Tag	DNGBackwardVersion = new Tag("DNGBackwardVersion", 50707);
 
 	// DNG, page 23
-	UniqueCameraModel(50708),
+	public static final Tag	UniqueCameraModel = new Tag("UniqueCameraModel", 50708);
 
-	LocalizedCameraModel(50709),
+	public static final Tag	LocalizedCameraModel = new Tag("LocalizedCameraModel", 50709);
 
 	// DNG, page 24
-	CFAPlaneColor(50710),
+	public static final Tag	CFAPlaneColor = new Tag("CFAPlaneColor", 50710);
 
 	// DNG, page 25
-	CFALayout(50711),
+	public static final Tag	CFALayout = new Tag("CFALayout", 50711);
 
-	LinearizationTable(50712),
-	BlackLevelRepeatDim(50713),
-	BlackLevel(50714),
-	BlackLevelDeltaH(50715),
-	BlackLevelDeltaV(50716),
+	public static final Tag	LinearizationTable = new Tag("LinearizationTable", 50712);
+	public static final Tag	BlackLevelRepeatDim = new Tag("BlackLevelRepeatDim", 50713);
+	public static final Tag	BlackLevel = new Tag("BlackLevel", 50714);
+	public static final Tag	BlackLevelDeltaH = new Tag("BlackLevelDeltaH", 50715);
+	public static final Tag	BlackLevelDeltaV = new Tag("BlackLevelDeltaV", 50716);
 
 	/*
 	 * DNG, page 29
 	 * See chapter 5, “Mapping Raw Values to Linear Reference Values” on page 77 for details of the processing model.
 	 */
-	WhiteLevel(50717),
+	public static final Tag	WhiteLevel = new Tag("WhiteLevel", 50717);
 
 	// DNG, page 29
-	DefaultScale(50718),
+	public static final Tag	DefaultScale = new Tag("DefaultScale", 50718);
 
 	// DNG, page 30
-	BestQualityScale(50780),
+	public static final Tag	BestQualityScale = new Tag("BestQualityScale", 50780);
 
 	// DNG, page 30
-	DefaultCropOrigin(50719),
+	public static final Tag	DefaultCropOrigin = new Tag("DefaultCropOrigin", 50719);
 
 	/*
 	 * DNG, page 31
 	 * http://www.barrypearson.co.uk/articles/dng/specification.htm
 	 */
-	DefaultCropSize(50720),
+	public static final Tag	DefaultCropSize = new Tag("DefaultCropSize", 50720);
 
 	// TODO
-	Canon_50752(50752),
+	public static final Tag	Canon_50752 = new Tag("Canon_50752", 50752);
 
 	/*
 	 * DNG, page 31
 	 * See chapter 6, “Mapping Camera Color Space to CIE XYZ Space” on page 79 for details of the color-processing model.
 	 * Exif, page 55
 	 */
-	CalibrationIlluminant1(50778),
+	public static final Tag	CalibrationIlluminant1 = new Tag("CalibrationIlluminant1", 50778);
 
 	/*
 	 * DNG, page 32
 	 * See chapter 6, “Mapping Camera Color Space to CIE XYZ Space” on page 79 for details of the color-processing model.
 	 * Exif, page 55
 	 */
-	CalibrationIlluminant2(50779),
+	public static final Tag	CalibrationIlluminant2 = new Tag("CalibrationIlluminant2", 50779);
 
 	/*
 	 * DNG, page 32
 	 * See chapter 6, “Mapping Camera Color Space to CIE XYZ Space” on page 79 for details of the color-processing model.
 	 */
-	ColorMatrix1(50721),
+	public static final Tag	ColorMatrix1 = new Tag("ColorMatrix1", 50721);
 
 	/*
 	 * DNG, page 33
 	 * See chapter 6, “Mapping Camera Color Space to CIE XYZ Space” on page 79 for details of the color-processing model.
 	 */
-	ColorMatrix2(50722),
+	public static final Tag	ColorMatrix2 = new Tag("ColorMatrix2", 50722);
 
 	/*
 	 * DNG, page 34
 	 * See chapter 6, “Mapping Camera Color Space to CIE XYZ Space” on page 79 for details of the color-processing model.
 	 */
-	CameraCalibration1(50723),
+	public static final Tag	CameraCalibration1 = new Tag("CameraCalibration1", 50723);
 
 	/*
 	 * DNG, page 34
 	 * See chapter 6, “Mapping Camera Color Space to CIE XYZ Space” on page 79 for details of the color-processing model.
 	 */
-	CameraCalibration2(50724),
+	public static final Tag	CameraCalibration2 = new Tag("CameraCalibration2", 50724);
 
-	ReductionMatrix1(50725),
-	ReductionMatrix2(50726),
+	public static final Tag	ReductionMatrix1 = new Tag("ReductionMatrix1", 50725);
+	public static final Tag	ReductionMatrix2 = new Tag("ReductionMatrix2", 50726);
 
 	/*
 	 * DNG, page 36
 	 * See chapter 6, “Mapping Camera Color Space to CIE XYZ Space” on page 79 for details of the color-processing model.
 	 */
-	AnalogBalance(50727),
-
-	/*
-	 * DNG, page 37
-	 * See chapter 6, “Mapping Camera Color Space to CIE XYZ Space” on page 79 for details of the color-processing model.
-	 */	
-	AsShotNeutral(50728),
+	public static final Tag	AnalogBalance = new Tag("AnalogBalance", 50727);
 
 	/*
 	 * DNG, page 37
 	 * See chapter 6, “Mapping Camera Color Space to CIE XYZ Space” on page 79 for details of the color-processing model.
 	 */
-	AsShotWhiteXY(50729),
+	public static final Tag	AsShotNeutral = new Tag("AsShotNeutral", 50728);
+
+	/*
+	 * DNG, page 37
+	 * See chapter 6, “Mapping Camera Color Space to CIE XYZ Space” on page 79 for details of the color-processing model.
+	 */
+	public static final Tag	AsShotWhiteXY = new Tag("AsShotWhiteXY", 50729);
 
 	// DNG, page 38
-	BaselineExposure(50730),
+	public static final Tag	BaselineExposure = new Tag("BaselineExposure", 50730);
 
 	// DNG, page 38
-	BaselineNoise(50731),
+	public static final Tag	BaselineNoise = new Tag("BaselineNoise", 50731);
 
 	// DNG, page 39
-	BaselineSharpness(50732),
+	public static final Tag	BaselineSharpness = new Tag("BaselineSharpness", 50732);
 
-	BayerGreenSplit(50733),
+	public static final Tag	BayerGreenSplit = new Tag("BayerGreenSplit", 50733);
 
 	// DNG, page 40
-	LinearResponseLimit(50734),
+	public static final Tag	LinearResponseLimit = new Tag("LinearResponseLimit", 50734);
 
-	CameraSerialNumber(50735),
-	LensInfo(50736),
-	ChromaBlurRadius(50737),
-
-	// DNG, page 42
-	AntiAliasStrength(50738),
+	public static final Tag	CameraSerialNumber = new Tag("CameraSerialNumber", 50735);
+	public static final Tag	LensInfo = new Tag("LensInfo", 50736);
+	public static final Tag	ChromaBlurRadius = new Tag("ChromaBlurRadius", 50737);
 
 	// DNG, page 42
-	ShadowScale(50739),
+	public static final Tag	AntiAliasStrength = new Tag("AntiAliasStrength", 50738);
+
+	// DNG, page 42
+	public static final Tag	ShadowScale = new Tag("ShadowScale", 50739);
 
 	// DNG, page 43
-	DNGPrivateData(50740),
+	public static final Tag	DNGPrivateData = new Tag("DNGPrivateData", 50740);
 
-	MakerNoteSafety(50741),
+	public static final Tag	MakerNoteSafety = new Tag("MakerNoteSafety", 50741);
 
 	// DNG, page 45
-	RawDataUniqueID(50781),
+	public static final Tag	RawDataUniqueID = new Tag("RawDataUniqueID", 50781);
 
-	OriginalRawFileName(50827),
-	OriginalRawFileData(50828),
+	public static final Tag	OriginalRawFileName = new Tag("OriginalRawFileName", 50827);
+	public static final Tag	OriginalRawFileData = new Tag("OriginalRawFileData", 50828);
 
 	/*
 	 * DNG, page 47
 	 * http://www.barrypearson.co.uk/articles/dng/specification.htm
 	 */
-	ActiveArea(50829),
+	public static final Tag	ActiveArea = new Tag("ActiveArea", 50829);
 
-	MaskedAreas(50830),
-	AsShotICCProfile(50831),
-	AsShotPreProfileMatrix(50832),
-	CurrentICCProfile(50833),
-	CurrentPreProfileMatrix(50834),
-	ColorimetricReference(50879),
+	public static final Tag	MaskedAreas = new Tag("MaskedAreas", 50830);
+	public static final Tag	AsShotICCProfile = new Tag("AsShotICCProfile", 50831);
+	public static final Tag	AsShotPreProfileMatrix = new Tag("AsShotPreProfileMatrix", 50832);
+	public static final Tag	CurrentICCProfile = new Tag("CurrentICCProfile", 50833);
+	public static final Tag	CurrentPreProfileMatrix = new Tag("CurrentPreProfileMatrix", 50834);
+	public static final Tag	ColorimetricReference = new Tag("ColorimetricReference", 50879);
 
 	// TODO
-	Canon_50885(50885),
-	Canon_50908(50908),
+	public static final Tag	Canon_50885 = new Tag("Canon_50885", 50885);
+	public static final Tag	Canon_50908 = new Tag("Canon_50908", 50908);
 
-	CameraCalibrationSignature(50931),
-	ProfileCalibrationSignature(50932),
-	ExtraCameraProfiles(50933),
-	AsShotProfileName(50934),
-	NoiseReductionApplied(50935),
-	ProfileName(50936),
-	ProfileHueSatMapDims(50937),
-	ProfileHueSatMapData1(50938),
-	ProfileHueSatMapData2(50939),
-	ProfileToneCurve(50940),
-	ProfileEmbedPolicy(50941),
-	ProfileCopyright(50942),
+	public static final Tag	CameraCalibrationSignature = new Tag("CameraCalibrationSignature", 50931);
+	public static final Tag	ProfileCalibrationSignature = new Tag("ProfileCalibrationSignature", 50932);
+	public static final Tag	ExtraCameraProfiles = new Tag("ExtraCameraProfiles", 50933);
+	public static final Tag	AsShotProfileName = new Tag("AsShotProfileName", 50934);
+	public static final Tag	NoiseReductionApplied = new Tag("NoiseReductionApplied", 50935);
+	public static final Tag	ProfileName = new Tag("ProfileName", 50936);
+	public static final Tag	ProfileHueSatMapDims = new Tag("ProfileHueSatMapDims", 50937);
+	public static final Tag	ProfileHueSatMapData1 = new Tag("ProfileHueSatMapData1", 50938);
+	public static final Tag	ProfileHueSatMapData2 = new Tag("ProfileHueSatMapData2", 50939);
+	public static final Tag	ProfileToneCurve = new Tag("ProfileToneCurve", 50940);
+	public static final Tag	ProfileEmbedPolicy = new Tag("ProfileEmbedPolicy", 50941);
+	public static final Tag	ProfileCopyright = new Tag("ProfileCopyright", 50942);
 
 	/*
 	 * DNG, page 58
 	 * Application is described in detail in Chapter 6.
 	 */
-	ForwardMatrix1(50964),
+	public static final Tag	ForwardMatrix1 = new Tag("ForwardMatrix1", 50964);
 
 	/*
 	 * DNG, page 59
 	 * Application is described in detail in Chapter 6.
 	 */
-	ForwardMatrix2(50965),
+	public static final Tag	ForwardMatrix2 = new Tag("ForwardMatrix2", 50965);
 
-	PreviewApplicationName(50966),
-	PreviewApplicationVersion(50967),
-	PreviewSettingsName(50968),
-
-	// DNG, page 61
-	PreviewSettingsDigest(50969),
+	public static final Tag	PreviewApplicationName = new Tag("PreviewApplicationName", 50966);
+	public static final Tag	PreviewApplicationVersion = new Tag("PreviewApplicationVersion", 50967);
+	public static final Tag	PreviewSettingsName = new Tag("PreviewSettingsName", 50968);
 
 	// DNG, page 61
-	PreviewColorSpace(50970),
+	public static final Tag	PreviewSettingsDigest = new Tag("PreviewSettingsDigest", 50969);
 
-	PreviewDateTime(50971),
-	RawImageDigest(50972),
-	OriginalRawFileDigest(50973),
-	SubTileBlockSize(50974),
-	RowInterleaveFactor(50975),
-	ProfileLookTableDims(50981),
-	ProfileLookTableData(50982),
-	OpcodeList1(51008),
-	OpcodeList2(51009),
-	OpcodeList3(51022),
+	// DNG, page 61
+	public static final Tag	PreviewColorSpace = new Tag("PreviewColorSpace", 50970);
+
+	public static final Tag	PreviewDateTime = new Tag("PreviewDateTime", 50971);
+	public static final Tag	RawImageDigest = new Tag("RawImageDigest", 50972);
+	public static final Tag	OriginalRawFileDigest = new Tag("OriginalRawFileDigest", 50973);
+	public static final Tag	SubTileBlockSize = new Tag("SubTileBlockSize", 50974);
+	public static final Tag	RowInterleaveFactor = new Tag("RowInterleaveFactor", 50975);
+	public static final Tag	ProfileLookTableDims = new Tag("ProfileLookTableDims", 50981);
+	public static final Tag	ProfileLookTableData = new Tag("ProfileLookTableData", 50982);
+	public static final Tag	OpcodeList1 = new Tag("OpcodeList1", 51008);
+	public static final Tag	OpcodeList2 = new Tag("OpcodeList2", 51009);
+	public static final Tag	OpcodeList3 = new Tag("OpcodeList3", 51022);
 
 	// DNG, page 67
-	NoiseProfile(51041),
+	public static final Tag	NoiseProfile = new Tag("NoiseProfile", 51041);
 
-	DefaultUserCrop(51125),
-	DefaultBlackRender(51110),
-	BaselineExposureOffset(51109),
-	ProfileLookTableEncoding(51108),
-	ProfileHueSatMapEncoding(51107),
-	OriginalDefaultFinalSize(51089),
-	OriginalBestQualityFinalSize(51090),
-	OriginalDefaultCropSize(51091),
+	public static final Tag	DefaultUserCrop = new Tag("DefaultUserCrop", 51125);
+	public static final Tag	DefaultBlackRender = new Tag("DefaultBlackRender", 51110);
+	public static final Tag	BaselineExposureOffset = new Tag("BaselineExposureOffset", 51109);
+	public static final Tag	ProfileLookTableEncoding = new Tag("ProfileLookTableEncoding", 51108);
+	public static final Tag	ProfileHueSatMapEncoding = new Tag("ProfileHueSatMapEncoding", 51107);
+	public static final Tag	OriginalDefaultFinalSize = new Tag("OriginalDefaultFinalSize", 51089);
+	public static final Tag	OriginalBestQualityFinalSize = new Tag("OriginalBestQualityFinalSize", 51090);
+	public static final Tag	OriginalDefaultCropSize = new Tag("OriginalDefaultCropSize", 51091);
 
 	// DNG, page 76
-	NewRawImageDigest(51111),
+	public static final Tag	NewRawImageDigest = new Tag("NewRawImageDigest", 51111);
 
-	RawToPreviewGain(51112);
+	public static final Tag	RawToPreviewGain = new Tag("RawToPreviewGain", 51112);
 
-	public final int number;
-
-	Tag(int number) { this.number = number; }
+	private static final Tag[] values = new Tag[] {
+		NewSubFileType, ImageWidth, ImageLength, BitsPerSample, Compression, PhotometricInterpretation, ImageDescription,
+		Make, Model, StripOffsets, Orientation, SamplesPerPixel, RowsPerStrip, StripByteCounts, XResolution, YResolution,
+		PlanarConfiguration, ResolutionUnit, Software, DateTime, Artist, TileWidth, TileLength, TileOffsets, TileByteCounts,
+		SubIFDs, JPEGTables, JPEGInterchangeFormat, JPEGInterchangeFormatLength, YCbCrCoefficients, YCbCrSubSampling,
+		YcbCrPositioning, ReferenceBlackWhite, XMP, CFARepeatPatternDim, CFAPattern, BatteryLevel, Copyright, ExposureTime,
+		FNumber, IPTC_NAA, ExifIFD, InterColorProfile, ExposureProgram, SpectralSensitivity, GPSInfo, ISOSpeedRatings, OECF,
+		Interlace, TimeZoneOffset, SelfTimerMode, SensitivityType, RecommendedExposureIndex, ExifVersion, DateTimeOriginal,
+		DateTimeDigitized, ComponentsConfiguration, CompressedBitsPerPixel, ShutterSpeedValue, ApertureValue, BrightnessValue,
+		ExposureBiasValue, MaxApertureValue, SubjectDistance, MeteringMode, LightSource, Flash, FocalLength, FlashEnergy,
+		SpatialFrequencyResponse, Noise, FocalPlaneXResolution, FocalPlaneYResolution, FocalPlaneResolutionUnit, ImageNumber,
+		SecurityClassification, ImageHistory, SubjectLocation, ExposureIndex, TIFF_EPStandardID, SensingMethod, MakerNote,
+		UserComment, SubSecTime, SubsecTimeOriginal, SubsecTimeDigitized, FlashPixVersion, ColorSpace, PixelXDimension,
+		PixelYDimension, Interoperability, ExifFocalPlaneXResolution, ExifFocalPlaneYResolution, ExifFocalPlaneResolutionUnit,
+		CustomRendered, ExposureMode, WhiteBalance, SceneCaptureType, BodySerialNumber, LensSpecification, LensMake, LensModel,
+		LensSerialNumber, Canon_50648, Canon_50649, Canon_50656, DNGVersion, DNGBackwardVersion, UniqueCameraModel,
+		LocalizedCameraModel, CFAPlaneColor, CFALayout, LinearizationTable, BlackLevelRepeatDim, BlackLevel, BlackLevelDeltaH,
+		BlackLevelDeltaV, WhiteLevel, DefaultScale, DefaultCropOrigin, DefaultCropSize, ColorMatrix1, ColorMatrix2,
+		CameraCalibration1, CameraCalibration2, ReductionMatrix1, ReductionMatrix2, AnalogBalance, AsShotNeutral, AsShotWhiteXY,
+		BaselineExposure, BaselineNoise, BaselineSharpness, BayerGreenSplit, LinearResponseLimit, CameraSerialNumber, LensInfo,
+		ChromaBlurRadius, AntiAliasStrength, ShadowScale, DNGPrivateData, MakerNoteSafety, Canon_50752, CalibrationIlluminant1,
+		CalibrationIlluminant2, BestQualityScale, RawDataUniqueID, OriginalRawFileName, OriginalRawFileData, ActiveArea,
+		MaskedAreas, AsShotICCProfile, AsShotPreProfileMatrix, CurrentICCProfile, CurrentPreProfileMatrix, ColorimetricReference,
+		Canon_50885, Canon_50908, CameraCalibrationSignature, ProfileCalibrationSignature, ExtraCameraProfiles, AsShotProfileName,
+		NoiseReductionApplied, ProfileName, ProfileHueSatMapDims, ProfileHueSatMapData1, ProfileHueSatMapData2, ProfileToneCurve,
+		ProfileEmbedPolicy, ProfileCopyright, ForwardMatrix1, ForwardMatrix2, PreviewApplicationName, PreviewApplicationVersion,
+		PreviewSettingsName, PreviewSettingsDigest, PreviewColorSpace, PreviewDateTime, RawImageDigest, OriginalRawFileDigest,
+		SubTileBlockSize, RowInterleaveFactor, ProfileLookTableDims, ProfileLookTableData, OpcodeList1, OpcodeList2, OpcodeList3,
+		NoiseProfile, OriginalDefaultFinalSize, OriginalBestQualityFinalSize, OriginalDefaultCropSize, ProfileHueSatMapEncoding,
+		ProfileLookTableEncoding, BaselineExposureOffset, DefaultBlackRender, NewRawImageDigest, RawToPreviewGain, DefaultUserCrop
+	};
 
 }
