@@ -65,6 +65,16 @@ public class TiffInputStream extends BufferedInputStream {
 
 	static { for (Tag tag: Tag.values()) TAGS.put(tag.number, tag); }
 
+	public static synchronized int toInt(short[] buffer, ByteOrder byteOrder) {
+		return byteOrder.equals(ByteOrder.LITTLE_ENDIAN)? (buffer[1] << 8) + buffer[0] : (buffer[0] << 8) + buffer[1];
+	}
+
+	public static synchronized long toLong(short[] buffer, ByteOrder byteOrder) {
+		return byteOrder.equals(ByteOrder.LITTLE_ENDIAN)?
+			(((long) buffer[3]) << 24) + (buffer[2] << 16) + (buffer[1] << 8) + buffer[0]:
+			(((long) buffer[0]) << 24) + (buffer[1] << 16) + (buffer[2] << 8) + buffer[3];
+	}
+
 	// Used to preserve state when we have to jump from file header to body and back.
 	private long mark = 0, currentPosition = 0;
 
@@ -141,7 +151,7 @@ public class TiffInputStream extends BufferedInputStream {
 		 * See http://docs.oracle.com/javase/7/docs/api/java/io/FilterInputStream.html#mark(int)
 		 *
 		 * We always mark the file beginning before reading or skipping bytes, so we can always move back to the initial
-		 * position and move around the file using the its absolute offsets.
+		 * position and move around the file using its absolute offsets.
 		 *
 		 * TODO due to the readlimit constraint we cannot read over 2GB of data at once.
 		 */
@@ -246,21 +256,11 @@ public class TiffInputStream extends BufferedInputStream {
 		return toInt(buffer, byteOrder);
 	}
 
-	public static synchronized int toInt(short[] buffer, ByteOrder byteOrder) {
-		return byteOrder.equals(ByteOrder.LITTLE_ENDIAN)? (buffer[1] << 8) + buffer[0] : (buffer[0] << 8) + buffer[1];
-	}
-
 	// TIFF's LONG type, a 4-byte unsigned integer, must be read as a 8-byte long in order to preserve sign.
 	public synchronized long readLONG() throws IOException {
 		short[] buffer = new short[4];
 		if (read(buffer) != 4) throw new EOFException();
 		return toLong(buffer, byteOrder);
-	}
-
-	public static synchronized long toLong(short[] buffer, ByteOrder byteOrder) {
-		return byteOrder.equals(ByteOrder.LITTLE_ENDIAN)?
-			(((long) buffer[3]) << 24) + (buffer[2] << 16) + (buffer[1] << 8) + buffer[0]:
-			(((long) buffer[0]) << 24) + (buffer[1] << 16) + (buffer[2] << 8) + buffer[3];
 	}
 
 	public synchronized RATIONAL readRATIONAL() throws IOException { return new RATIONAL(readLONG(), readLONG()); }
