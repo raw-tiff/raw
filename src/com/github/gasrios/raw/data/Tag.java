@@ -30,6 +30,28 @@ public enum Tag {
 
 	Unknown(-1),
 
+	/*
+	 * Exif, page 83. See also page 32.
+	 *
+	 * This tag and InteroperabilityVersion below are not unique in all contexts; as they only occur inside an Interoperability
+	 * IFD and there they happen to be unique, there are no consistency issues, but in the future when support to GPS IFDs
+	 * is added there will be trouble.
+	 */
+	InteroperabilityIndex(1),
+
+	/*
+	 * Exif, page 32.
+	 *
+	 * No documentation referencing this tag was found yet but most people online call it "InteroperabilityVersion" and read
+	 * its value as an array of ASCII chars (at least for Canon's .CR2, its type is UNDEFINED), so I am adopting the same
+	 * convention.
+	 *
+	 * This tag and InteroperabilityIndex above are not unique in all contexts; as they only occur inside an Interoperability
+	 * IFD and there they happen to be unique, there are no consistency issues, but in the future when support to GPS IFDs
+	 * is added there will be trouble.
+	 */
+	InteroperabilityVersion(2),
+
 	// DNG, page 18
 	NewSubFileType(254),
 

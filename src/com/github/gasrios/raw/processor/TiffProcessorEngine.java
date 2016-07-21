@@ -57,7 +57,7 @@ public final class TiffProcessorEngine {
 		// TODO NewSubFileType is found in DNG files. Canon files (.CR2) do not have it.
 		if (ifd0.containsKey(Tag.NewSubFileType) && ((long) ifd0.get(Tag.NewSubFileType)) == 1) listener.thumbnailIfd(ifd0);
 		listener.firstIfd(ifd0);
-		processIfd(ifd0);
+		ifd(ifd0);
 
 		/*
 		 * TODO A fully compatible TIFF reader should honor "TIFF Technical Note 1: TIFF Tress" and read sub-IFDs of any depth.
@@ -70,7 +70,7 @@ public final class TiffProcessorEngine {
 		ImageFileDirectory currentIfd = ifd0;
 		while (currentIfd.getNext() != null) {
 			listener.nextIfd(currentIfd.getNext());
-			processIfd(currentIfd = currentIfd.getNext());
+			ifd(currentIfd = currentIfd.getNext());
 		}
 
 		if (ifd0.containsKey(Tag.ExifIFD)) exifIfd((ImageFileDirectory) ifd0.get(Tag.ExifIFD));
@@ -83,7 +83,7 @@ public final class TiffProcessorEngine {
 
 	}
 
-	private void processIfd(ImageFileDirectory ifd) throws TiffProcessorException {
+	private void ifd(ImageFileDirectory ifd) throws TiffProcessorException {
 
 		if (ifd.containsKey(Tag.NewSubFileType) && ((long) ifd.get(Tag.NewSubFileType)) == 0) listener.highResolutionIfd(ifd);
 		if (ifd.containsKey(Tag.NewSubFileType) && ((long) ifd.get(Tag.NewSubFileType)) == 1) listener.previewIfd(ifd);
@@ -96,13 +96,20 @@ public final class TiffProcessorEngine {
 	@SuppressWarnings("unchecked")
 	private void subIfds(ImageFileDirectory ifd) throws TiffProcessorException {
 		if (ifd.containsKey(Tag.SubIFDs) && !((List<ImageFileDirectory>) ifd.get(Tag.SubIFDs)).isEmpty())
-			for (ImageFileDirectory subIfd: (List<ImageFileDirectory>) ifd.get(Tag.SubIFDs)) processIfd(subIfd);
+			for (ImageFileDirectory subIfd: (List<ImageFileDirectory>) ifd.get(Tag.SubIFDs)) ifd(subIfd);
 	}
 
 	private void exifIfd(ImageFileDirectory exifIfd) throws TiffProcessorException {
 		listener.exifIfd(exifIfd);
 		listener.ifd(exifIfd);
-		for (Tag tag: exifIfd.keySet()) listener.tag(tag, exifIfd.get(tag));
+		for (Tag tag: exifIfd.keySet()) if (tag != Tag.Interoperability) listener.tag(tag, exifIfd.get(tag));
+		if (exifIfd.containsKey(Tag.Interoperability)) interoperability((ImageFileDirectory) exifIfd.get(Tag.Interoperability));
+	}
+
+	private void interoperability(ImageFileDirectory interoperabilityIfd) throws TiffProcessorException {
+		listener.interoperabilityIfd(interoperabilityIfd);
+		listener.ifd(interoperabilityIfd);
+		for (Tag tag: interoperabilityIfd.keySet()) listener.tag(tag, interoperabilityIfd.get(tag));
 	}
 
 	private void xmp(Map<String, String> xmp) throws TiffProcessorException {

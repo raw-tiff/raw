@@ -37,6 +37,8 @@ public class ReadMetadata extends AbstractTiffProcessor {
 
 	@Override public void exifIfd(ImageFileDirectory ifd) { System.out.println("\nExif"); }
 
+	@Override public void interoperabilityIfd(ImageFileDirectory ifd) { System.out.println("\nInteroperability"); }
+
 	@Override public void nextIfd(ImageFileDirectory ifd) { System.out.println("\nNext"); }
 
 	@Override public void xmp(Map<String, String> xmp) { System.out.println("\nXMP\n"); }

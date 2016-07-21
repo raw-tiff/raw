@@ -72,10 +72,19 @@ public final class ImageFileDirectoryLoader {
 		}
 
 		if (ifd.containsKey(Tag.ExifIFD)) {
-			ImageFileDirectory exifIFD = processIfd((long) ifd.get(Tag.ExifIFD));
-			exifIFD.put(Tag.ExifVersion, new String((byte[]) exifIFD.get(Tag.ExifVersion)));
-			ifd.put(Tag.ExifIFD, exifIFD);
-			// TODO process Interoperability(40965) IFD
+
+			ImageFileDirectory exifIfd = processIfd((long) ifd.get(Tag.ExifIFD));
+			exifIfd.put(Tag.ExifVersion, new String((byte[]) exifIfd.get(Tag.ExifVersion)));
+			ifd.put(Tag.ExifIFD, exifIfd);
+
+			if (exifIfd.containsKey(Tag.Interoperability)) {
+				ImageFileDirectory interoperabilityIFD = processIfd((long) exifIfd.get(Tag.Interoperability));
+				interoperabilityIFD.put(
+					Tag.InteroperabilityVersion,
+					new String((byte[]) interoperabilityIFD.get(Tag.InteroperabilityVersion)));
+				exifIfd.put(Tag.Interoperability, interoperabilityIFD);
+			}
+
 		}
 
 		if (ifd.containsKey(Tag.XMP)) {
@@ -130,7 +139,11 @@ public final class ImageFileDirectoryLoader {
 			return;
 		}
 
-		// See TIFF 6.0 Specification, page 16
+		/*
+		 * See TIFF 6.0 Specification, page 16
+		 *
+		 * "Readers should skip over fields containing an unexpected field type."
+		 */
 		Type type = in.readType();
 		if (type.equals(Type.UNEXPECTED)) {
 			in.skip(8);
@@ -140,6 +153,11 @@ public final class ImageFileDirectoryLoader {
 		long count = in.readLONG();
 		if (count > 0xFFFFFFFFL) throw new TiffProcessorException("java arrays do not support lengths out of the positive integer range: " + count);
 
+		/*
+		 * See TIFF 6.0 Specification, page 15
+		 *
+		 * "Value Offset contains the Value instead of pointing to the Value if and only if the Value fits into 4 bytes."
+		 */
 		if (type.size * count > 4) {
 			long offset = in.readOffset();
 			in.mark();

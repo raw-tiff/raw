@@ -67,6 +67,9 @@ public interface TiffProcessor {
 	// Called for an Exif IFD if it exists.
 	void exifIfd(ImageFileDirectory ifd) throws TiffProcessorException;
 
+	// Called for an Interoperability IFD if it exists.
+	void interoperabilityIfd(ImageFileDirectory ifd) throws TiffProcessorException;
+
 	// Called if an IFD chain exists.
 	void nextIfd(ImageFileDirectory ifd) throws TiffProcessorException;
 
