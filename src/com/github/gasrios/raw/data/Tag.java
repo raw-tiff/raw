@@ -42,7 +42,7 @@ public class Tag implements Comparable<Tag> {
 
 	private final String name;
 
-	Tag(String name, int number) {
+	public Tag(String name, int number) {
 		this.name = name;
 		this.number = number;
 	}
@@ -52,8 +52,6 @@ public class Tag implements Comparable<Tag> {
 	@Override public final int compareTo(Tag tag) { return number - tag.number; }
 
 	@Override public final String toString() { return name; }
-
-	public static final Tag	Unknown = new Tag("Unknown", -1);
 
 	// DNG, page 18
 	public static final Tag	NewSubFileType = new Tag("NewSubFileType", 254);

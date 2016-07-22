@@ -23,10 +23,8 @@ import com.github.gasrios.raw.swing.ImageSRGB;
 
 public class BlackAndWhite extends LoadHighResolutionImage {
 
-	private static final boolean IGNORE_UNKNOWN_TAGS = true;
-
 	public static void main(String[] args) throws Exception {
-		new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(), IGNORE_UNKNOWN_TAGS).run();
+		new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite()).run();
 	}
 
 	@Override public void end() throws TiffProcessorException {

@@ -83,17 +83,13 @@ public class TiffInputStream extends BufferedInputStream {
 	// Used to preserve state when we have to jump from file header to body and back.
 	private long mark = 0, currentPosition = 0;
 
-	private boolean ignoreUnknownTags;
-
 	private ByteOrder byteOrder;
 
 	public ByteOrder getByteOrder() { return byteOrder; }
 
-	public TiffInputStream(InputStream in, boolean ignoreUnknownTags) throws TiffProcessorException, IOException {
+	public TiffInputStream(InputStream in) throws TiffProcessorException, IOException {
 
 		super(in);
-
-		this.ignoreUnknownTags = ignoreUnknownTags;
 
 		/*
 		 * See http://docs.oracle.com/javase/7/docs/api/java/io/FilterInputStream.html#mark(int)
@@ -311,15 +307,13 @@ public class TiffInputStream extends BufferedInputStream {
 	public synchronized Tag readTag() throws TiffProcessorException, IOException {
 		int tag = readSHORT();
 		if (TAGS.containsKey(tag)) return TAGS.get(tag);
-		else if (ignoreUnknownTags) return Tag.Unknown;
-		else throw new TiffProcessorException("Unknown tag #" + tag);
+		else return new Tag(""+tag, tag);
 	}
 
 	public synchronized InteroperabilityTag readInteroperabilityTag() throws TiffProcessorException, IOException {
 		int tag = readSHORT();
 		if (INTEROPERABILITY_TAGS.containsKey(tag)) return INTEROPERABILITY_TAGS.get(tag);
-		else if (ignoreUnknownTags) return InteroperabilityTag.Unknown;
-		else throw new TiffProcessorException("Unknown interoperability tag #" + tag);
+		else return new InteroperabilityTag(""+tag, tag);
 	}
 
 	public synchronized Type readType() throws TiffProcessorException, IOException {

@@ -14,11 +14,9 @@ package com.github.gasrios.raw.data;
 
 public final class InteroperabilityTag extends Tag {
 
-	private InteroperabilityTag(String name, int number) { super(name, number); }
+	public InteroperabilityTag(String name, int number) { super(name, number); }
 
 	public static final InteroperabilityTag[] values() {return values; }
-
-	public static final InteroperabilityTag	Unknown = new InteroperabilityTag("Unknown", -1);
 
 	// Exif, page 83. See also page 32.
 	public static final InteroperabilityTag	InteroperabilityIndex = new InteroperabilityTag("InteroperabilityIndex", 1);

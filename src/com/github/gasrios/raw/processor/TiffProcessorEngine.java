@@ -43,11 +43,7 @@ public final class TiffProcessorEngine {
 	private TiffProcessor listener;
 
 	public TiffProcessorEngine(InputStream in, TiffProcessor listener) throws TiffProcessorException, IOException, XMPException {
-		this(in, listener, true);
-	}
-
-	public TiffProcessorEngine(InputStream in, TiffProcessor listener, boolean ignoreUnknownTags) throws TiffProcessorException, IOException, XMPException {
-		ifd0 = (new ImageFileDirectoryLoader(new TiffInputStream(in, ignoreUnknownTags))).load();
+		ifd0 = (new ImageFileDirectoryLoader(new TiffInputStream(in))).load();
 		this.listener = listener;
 	}
 

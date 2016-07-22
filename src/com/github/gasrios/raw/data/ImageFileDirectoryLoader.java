@@ -113,12 +113,7 @@ public final class ImageFileDirectoryLoader {
 
 		int entriescount = in.readSHORT();
 
-		for (int i = 0; i < entriescount; i++) {
-			Tag tag = in.readTag();
-			if (tag.equals(Tag.Unknown)) {
-				in.skip(10);
-			} else processIfdEntry(ifd, tag);
-		}
+		for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readTag());
 
 		long offset = in.readOffset();
 
@@ -144,15 +139,8 @@ public final class ImageFileDirectoryLoader {
 	private ImageFileDirectory processInteroperabilityIfd(long offset) throws IOException, TiffProcessorException {
 		in.seek(offset);
 		ImageFileDirectory ifd = new ImageFileDirectory(in);
-
 		int entriescount = in.readSHORT();
-		for (int i = 0; i < entriescount; i++) {
-			InteroperabilityTag tag = in.readInteroperabilityTag();
-			if (tag.equals(Tag.Unknown)) {
-				in.skip(10);
-			} else processIfdEntry(ifd, tag);
-		}
-
+		for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readInteroperabilityTag());
 		return ifd;
 	}
 
