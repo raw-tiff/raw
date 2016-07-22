@@ -11,9 +11,8 @@
  */
 
 /*
- * This used to be an enum until the moment I found out the numeric identifiers were not unique for all scopes (which may or
- * may not be a violation of the TIFF specification letter, but surely is a violation of its spirit). For example, 1 can be
- * the "InteroperabilityIndex" of an Interoperability IFD, or "GPSLatitudeRef", inside a GPS IFD.
+ * This used to be an enum until the moment I found out the numeric identifiers were not unique for all scopes. For example,
+ * 1 can be the "InteroperabilityIndex" of an Interoperability IFD, or "GPSLatitudeRef", inside a GPS IFD.
  *
  * By then the simplest way to account for that was:
  *
@@ -47,11 +46,11 @@ public class Tag implements Comparable<Tag> {
 		this.number = number;
 	}
 
-	public static Tag[] values() { return values; }
-
 	@Override public final int compareTo(Tag tag) { return number - tag.number; }
 
 	@Override public final String toString() { return name; }
+
+	public static Tag[] values() { return values; }
 
 	// DNG, page 18
 	public static final Tag	NewSubFileType = new Tag("NewSubFileType", 254);
@@ -247,11 +246,6 @@ public class Tag implements Comparable<Tag> {
 	public static final Tag	LensModel = new Tag("LensModel", 42036);
 	public static final Tag	LensSerialNumber = new Tag("LensSerialNumber", 42037);
 
-	// TODO
-	public static final Tag	Canon_50648 = new Tag("Canon_50648", 50648);
-	public static final Tag	Canon_50649 = new Tag("Canon_50649", 50649);
-	public static final Tag	Canon_50656 = new Tag("Canon_50656", 50656);
-
 	// DNG, page 22
 	public static final Tag	DNGVersion = new Tag("DNGVersion", 50706);
 
@@ -295,9 +289,6 @@ public class Tag implements Comparable<Tag> {
 	 * http://www.barrypearson.co.uk/articles/dng/specification.htm
 	 */
 	public static final Tag	DefaultCropSize = new Tag("DefaultCropSize", 50720);
-
-	// TODO
-	public static final Tag	Canon_50752 = new Tag("Canon_50752", 50752);
 
 	/*
 	 * DNG, page 31
@@ -405,11 +396,6 @@ public class Tag implements Comparable<Tag> {
 	public static final Tag	CurrentICCProfile = new Tag("CurrentICCProfile", 50833);
 	public static final Tag	CurrentPreProfileMatrix = new Tag("CurrentPreProfileMatrix", 50834);
 	public static final Tag	ColorimetricReference = new Tag("ColorimetricReference", 50879);
-
-	// TODO
-	public static final Tag	Canon_50885 = new Tag("Canon_50885", 50885);
-	public static final Tag	Canon_50908 = new Tag("Canon_50908", 50908);
-
 	public static final Tag	CameraCalibrationSignature = new Tag("CameraCalibrationSignature", 50931);
 	public static final Tag	ProfileCalibrationSignature = new Tag("ProfileCalibrationSignature", 50932);
 	public static final Tag	ExtraCameraProfiles = new Tag("ExtraCameraProfiles", 50933);
@@ -488,21 +474,21 @@ public class Tag implements Comparable<Tag> {
 		UserComment, SubSecTime, SubsecTimeOriginal, SubsecTimeDigitized, FlashPixVersion, ColorSpace, PixelXDimension,
 		PixelYDimension, Interoperability, ExifFocalPlaneXResolution, ExifFocalPlaneYResolution, ExifFocalPlaneResolutionUnit,
 		CustomRendered, ExposureMode, WhiteBalance, SceneCaptureType, BodySerialNumber, LensSpecification, LensMake, LensModel,
-		LensSerialNumber, Canon_50648, Canon_50649, Canon_50656, DNGVersion, DNGBackwardVersion, UniqueCameraModel,
-		LocalizedCameraModel, CFAPlaneColor, CFALayout, LinearizationTable, BlackLevelRepeatDim, BlackLevel, BlackLevelDeltaH,
-		BlackLevelDeltaV, WhiteLevel, DefaultScale, DefaultCropOrigin, DefaultCropSize, ColorMatrix1, ColorMatrix2,
-		CameraCalibration1, CameraCalibration2, ReductionMatrix1, ReductionMatrix2, AnalogBalance, AsShotNeutral, AsShotWhiteXY,
-		BaselineExposure, BaselineNoise, BaselineSharpness, BayerGreenSplit, LinearResponseLimit, CameraSerialNumber, LensInfo,
-		ChromaBlurRadius, AntiAliasStrength, ShadowScale, DNGPrivateData, MakerNoteSafety, Canon_50752, CalibrationIlluminant1,
-		CalibrationIlluminant2, BestQualityScale, RawDataUniqueID, OriginalRawFileName, OriginalRawFileData, ActiveArea,
-		MaskedAreas, AsShotICCProfile, AsShotPreProfileMatrix, CurrentICCProfile, CurrentPreProfileMatrix, ColorimetricReference,
-		Canon_50885, Canon_50908, CameraCalibrationSignature, ProfileCalibrationSignature, ExtraCameraProfiles, AsShotProfileName,
-		NoiseReductionApplied, ProfileName, ProfileHueSatMapDims, ProfileHueSatMapData1, ProfileHueSatMapData2, ProfileToneCurve,
-		ProfileEmbedPolicy, ProfileCopyright, ForwardMatrix1, ForwardMatrix2, PreviewApplicationName, PreviewApplicationVersion,
-		PreviewSettingsName, PreviewSettingsDigest, PreviewColorSpace, PreviewDateTime, RawImageDigest, OriginalRawFileDigest,
-		SubTileBlockSize, RowInterleaveFactor, ProfileLookTableDims, ProfileLookTableData, OpcodeList1, OpcodeList2, OpcodeList3,
-		NoiseProfile, OriginalDefaultFinalSize, OriginalBestQualityFinalSize, OriginalDefaultCropSize, ProfileHueSatMapEncoding,
-		ProfileLookTableEncoding, BaselineExposureOffset, DefaultBlackRender, NewRawImageDigest, RawToPreviewGain, DefaultUserCrop
+		LensSerialNumber, DNGVersion, DNGBackwardVersion, UniqueCameraModel, LocalizedCameraModel, CFAPlaneColor, CFALayout,
+		LinearizationTable, BlackLevelRepeatDim, BlackLevel, BlackLevelDeltaH, BlackLevelDeltaV, WhiteLevel, DefaultScale,
+		DefaultCropOrigin, DefaultCropSize, ColorMatrix1, ColorMatrix2, CameraCalibration1, CameraCalibration2, ReductionMatrix1,
+		ReductionMatrix2, AnalogBalance, AsShotNeutral, AsShotWhiteXY, BaselineExposure, BaselineNoise, BaselineSharpness,
+		BayerGreenSplit, LinearResponseLimit, CameraSerialNumber, LensInfo, ChromaBlurRadius, AntiAliasStrength, ShadowScale,
+		DNGPrivateData, MakerNoteSafety, CalibrationIlluminant1, CalibrationIlluminant2, BestQualityScale, RawDataUniqueID,
+		OriginalRawFileName, OriginalRawFileData, ActiveArea, MaskedAreas, AsShotICCProfile, AsShotPreProfileMatrix,
+		CurrentICCProfile, CurrentPreProfileMatrix, ColorimetricReference, CameraCalibrationSignature, ProfileCalibrationSignature,
+		ExtraCameraProfiles, AsShotProfileName, NoiseReductionApplied, ProfileName, ProfileHueSatMapDims, ProfileHueSatMapData1,
+		ProfileHueSatMapData2, ProfileToneCurve, ProfileEmbedPolicy, ProfileCopyright, ForwardMatrix1, ForwardMatrix2,
+		PreviewApplicationName, PreviewApplicationVersion, PreviewSettingsName, PreviewSettingsDigest, PreviewColorSpace,
+		PreviewDateTime, RawImageDigest, OriginalRawFileDigest, SubTileBlockSize, RowInterleaveFactor, ProfileLookTableDims,
+		ProfileLookTableData, OpcodeList1, OpcodeList2, OpcodeList3, NoiseProfile, OriginalDefaultFinalSize,
+		OriginalBestQualityFinalSize, OriginalDefaultCropSize, ProfileHueSatMapEncoding, ProfileLookTableEncoding,
+		BaselineExposureOffset, DefaultBlackRender, NewRawImageDigest, RawToPreviewGain, DefaultUserCrop
 	};
 
 }
