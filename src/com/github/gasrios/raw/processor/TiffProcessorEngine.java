@@ -59,13 +59,6 @@ public final class TiffProcessorEngine {
 		listener.firstIfd(ifd0);
 		ifd(ifd0);
 
-		/*
-		 * TODO A fully compatible TIFF reader should honor "TIFF Technical Note 1: TIFF Tress" and read sub-IFDs of any depth.
-		 *
-		 * Having said that, this works for DNG.
-		 */
-		subIfds(ifd0);
-
 		// IFD chain. So far only seen in Canon's .CR2 files
 		ImageFileDirectory currentIfd = ifd0;
 		while (currentIfd.getNext() != null) {
@@ -90,6 +83,8 @@ public final class TiffProcessorEngine {
 
 		listener.ifd(ifd);
 		for (Tag tag: ifd.keySet()) if (tag != Tag.SubIFDs && tag != Tag.ExifIFD && tag != Tag.XMP) listener.tag(tag, ifd.get(tag));
+
+		subIfds(ifd);
 
 	}
 

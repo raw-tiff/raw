@@ -50,26 +50,11 @@ public final class ImageFileDirectoryLoader {
 		ifd = new ImageFileDirectory(in);
 	}
 
-	@SuppressWarnings("unchecked")
 	public ImageFileDirectory load() throws TiffProcessorException, IOException, FileNotFoundException, XMPException {
 
 		long nextOffset = processIfd(ifd);
 
 		// Second pass: replace offsets to subIFDs with them and load XMP data
-
-		/*
-		 * TODO A fully compatible TIFF reader should honor "TIFF Technical Note 1: TIFF Tress" and read sub-IFDs of any depth.
-		 *
-		 * Having said that, this works for DNG.
-		 */
-		if (ifd.containsKey(Tag.SubIFDs)) {
-			List<ImageFileDirectory> subIfds = new Vector<ImageFileDirectory>();
-			// FIXME has to be wrong. I never load Vectors, only arrays.
-			if (ifd.get(Tag.SubIFDs) instanceof List)
-				for (long offset : ((List<Long>) ifd.get(Tag.SubIFDs))) subIfds.add(processIfd(offset));
-			else subIfds.add(processIfd((long) ifd.get(Tag.SubIFDs)));
-			ifd.put(Tag.SubIFDs, subIfds);
-		}
 
 		if (ifd.containsKey(Tag.ExifIFD)) {
 
@@ -85,6 +70,13 @@ public final class ImageFileDirectoryLoader {
 					new String((byte[]) interoperabilityIFD.get(InteroperabilityTag.InteroperabilityVersion)));
 				exifIfd.put(Tag.Interoperability, interoperabilityIFD);
 			}
+
+			/*
+			 * See Exif 2.3 Specification, page 46
+			 *
+			 * TODO MakerNote = java.lang.Byte[44926] { 39, 0, 1, 0, 3, 0, 49, 0, 0, 0... }
+			 * TODO UserComment = java.lang.Byte[264] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
+			 */
 
 		}
 
@@ -116,15 +108,30 @@ public final class ImageFileDirectoryLoader {
 
 	}
 
+	@SuppressWarnings("unchecked")
 	private long processIfd(ImageFileDirectory ifd) throws IOException, TiffProcessorException {
+
 		int entriescount = in.readSHORT();
+
 		for (int i = 0; i < entriescount; i++) {
 			Tag tag = in.readTag();
 			if (tag.equals(Tag.Unknown)) {
 				in.skip(10);
 			} else processIfdEntry(ifd, tag);
 		}
-		return in.readOffset();
+
+		long offset = in.readOffset();
+
+		if (ifd.containsKey(Tag.SubIFDs)) {
+			List<ImageFileDirectory> subIfds = new Vector<ImageFileDirectory>();
+			if (ifd.get(Tag.SubIFDs) instanceof List)
+				for (long subIfdOffset : ((List<Long>) ifd.get(Tag.SubIFDs))) subIfds.add(processIfd(subIfdOffset));
+			else subIfds.add(processIfd((long) ifd.get(Tag.SubIFDs)));
+			ifd.put(Tag.SubIFDs, subIfds);
+		}
+
+		return offset;
+
 	}
 
 	private ImageFileDirectory processIfd(long offset) throws IOException, TiffProcessorException {
@@ -134,7 +141,10 @@ public final class ImageFileDirectoryLoader {
 		return ifd;
 	}
 
-	private long processInteroperabilityIfd(ImageFileDirectory ifd) throws IOException, TiffProcessorException {
+	private ImageFileDirectory processInteroperabilityIfd(long offset) throws IOException, TiffProcessorException {
+		in.seek(offset);
+		ImageFileDirectory ifd = new ImageFileDirectory(in);
+
 		int entriescount = in.readSHORT();
 		for (int i = 0; i < entriescount; i++) {
 			InteroperabilityTag tag = in.readInteroperabilityTag();
@@ -142,13 +152,7 @@ public final class ImageFileDirectoryLoader {
 				in.skip(10);
 			} else processIfdEntry(ifd, tag);
 		}
-		return in.readOffset();
-	}
 
-	private ImageFileDirectory processInteroperabilityIfd(long offset) throws IOException, TiffProcessorException {
-		in.seek(offset);
-		ImageFileDirectory ifd = new ImageFileDirectory(in);
-		processInteroperabilityIfd(ifd);
 		return ifd;
 	}
 
