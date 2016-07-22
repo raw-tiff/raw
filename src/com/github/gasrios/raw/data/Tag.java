@@ -47,7 +47,7 @@ public class Tag implements Comparable<Tag> {
 		this.number = number;
 	}
 
-	public static Tag[] values() {return values; }
+	public static Tag[] values() { return values; }
 
 	@Override public final int compareTo(Tag tag) { return number - tag.number; }
 
