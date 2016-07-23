@@ -19,7 +19,7 @@ public final class InteroperabilityTag extends Tag {
 	public static final InteroperabilityTag[] values() {return values; }
 
 	// Exif, page 83. See also page 32.
-	public static final InteroperabilityTag	InteroperabilityIndex = new InteroperabilityTag("InteroperabilityIndex", 1);
+	public static final InteroperabilityTag InteroperabilityIndex = new InteroperabilityTag("InteroperabilityIndex", 1);
 
 	/*
 	 * Exif, page 32.
@@ -28,7 +28,7 @@ public final class InteroperabilityTag extends Tag {
 	 * its value as an array of ASCII chars (at least for Canon's .CR2, its type is UNDEFINED), so I am adopting the same
 	 * convention.
 	 */
-	public static final InteroperabilityTag	InteroperabilityVersion = new InteroperabilityTag("InteroperabilityVersion", 2);
+	public static final InteroperabilityTag InteroperabilityVersion = new InteroperabilityTag("InteroperabilityVersion", 2);
 
 	private static final InteroperabilityTag[] values = new InteroperabilityTag[] { InteroperabilityIndex, InteroperabilityVersion };
 
