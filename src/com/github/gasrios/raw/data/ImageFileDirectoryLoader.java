@@ -72,7 +72,7 @@ public final class ImageFileDirectoryLoader {
 			}
 
 			if (exifIfd.containsKey(Tag.MakerNote)) {
-				ImageFileDirectory makerNoteIFD = processIfd((long) exifIfd.get(Tag.MakerNote));
+				ImageFileDirectory makerNoteIFD = processMakerNoteIfd((long) exifIfd.get(Tag.MakerNote));
 				exifIfd.put(Tag.MakerNote, makerNoteIFD);
 			}
 
@@ -143,7 +143,40 @@ public final class ImageFileDirectoryLoader {
 		return ifd;
 	}
 
+	/*
+	 * TODO Try and read those as IFDs, see if it works?
+	 *
+	 * ComponentsConfiguration = java.lang.Byte[4] { 1, 2, 3, 0 }
+	 * UserComment = java.lang.Byte[264] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
+	 * CameraInfo = java.lang.Byte[1536] { -86, -86, 104, 48, 104, 48, 88, 0, 123, 123... }
+	 * DustRemovalData = java.lang.Byte[1024] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
+	 * Flavor = java.lang.Byte[16448] { 64, 64, 0, 0, 3, 0, 0, 32, 0, 0... }
+	 * 16401 = java.lang.Byte[252] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
+	 * VignettingCorr = java.lang.Byte[116] { 0, 16, 116, 0, 1, 0, 0, 0, 0, 0... }
+	 * LensInfo = java.lang.Byte[30] { 0, 0, 0, 0, 3, 0, 0, 0, 62, 0... }
+	 */
+	private ImageFileDirectory processMakerNoteIfd(long offset) throws IOException, TiffProcessorException {
+		in.seek(offset);
+		ImageFileDirectory ifd = new ImageFileDirectory(in);
+		int entriescount = in.readSHORT();
+		for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readMakerNoteTag());
+		return ifd;
+	}
+
 	private void processIfdEntry(ImageFileDirectory ifd, Tag tag) throws TiffProcessorException, IOException {
+
+		/*
+		 * See Exif Version 2.3, page 46
+		 *
+		 * TODO works for Canon, must test other makers.
+		 *
+		 * Type is UNDEFINED, count the IFD size in bytes. We just ignore them and read the entry as we would an offset.
+		 */
+		if (tag.equals(Tag.MakerNote)) {
+			in.skip(6);
+			ifd.put(tag, processIfdEntryValue(Type.LONG, 1));
+			return;
+		}
 
 		/*
 		 * See TIFF 6.0 Specification, page 16
@@ -158,16 +191,6 @@ public final class ImageFileDirectoryLoader {
 
 		long count = in.readLONG();
 		if (count > 0xFFFFFFFFL) throw new TiffProcessorException("java arrays do not support lengths out of the positive integer range: " + count);
-
-		/*
-		 * See Exif Version 2.3, page 46
-		 *
-		 * TODO works for Canon, must test for other makers.
-		 */
-		if (tag.equals(Tag.MakerNote)) {
-			type = Type.LONG;
-			count = 1;
-		}
 
 		/*
 		 * See TIFF 6.0 Specification, page 15

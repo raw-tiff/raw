@@ -53,7 +53,9 @@ import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.github.gasrios.raw.data.CanonMakerNoteTag;
 import com.github.gasrios.raw.data.InteroperabilityTag;
+import com.github.gasrios.raw.data.MakerNoteTag;
 import com.github.gasrios.raw.data.Tag;
 import com.github.gasrios.raw.data.Type;
 import com.github.gasrios.raw.lang.RATIONAL;
@@ -64,10 +66,12 @@ public class TiffInputStream extends BufferedInputStream {
 
 	private static final Map<Integer, Tag> TAGS = new HashMap<Integer, Tag>();
 	private static final Map<Integer, InteroperabilityTag> INTEROPERABILITY_TAGS = new HashMap<Integer, InteroperabilityTag>();
+	private static final Map<Integer, CanonMakerNoteTag> MAKERNOTE_TAGS = new HashMap<Integer, CanonMakerNoteTag>();
 
 	static {
 		for (Tag tag: Tag.values()) TAGS.put(tag.number, tag);
 		for (InteroperabilityTag tag: InteroperabilityTag.values()) INTEROPERABILITY_TAGS.put(tag.number, tag);
+		for (CanonMakerNoteTag tag: CanonMakerNoteTag.values()) MAKERNOTE_TAGS.put(tag.number, tag);
 	}
 
 	public static synchronized int toInt(short[] buffer, ByteOrder byteOrder) {
@@ -297,7 +301,16 @@ public class TiffInputStream extends BufferedInputStream {
 		if (read(buffer) != length - 1) throw new EOFException();
 		if (read() != 0) throw new TiffProcessorException("Non null terminated string");
 		currentPosition+=length;
-		return new String(buffer);
+		return newString(buffer);
+	}
+
+	// Trim null padded ASCII sequences. Yes, it can happen in proprietary tags.
+	private String newString(byte[] buffer) {
+		int size = 0;
+		for (int i = 0; i < buffer.length; i++) if (buffer[i] > 0) size++; else break;
+		byte[] newBuffer = new byte[size];
+		System.arraycopy(buffer, 0, newBuffer, 0, size);
+		return new String(newBuffer);
 	}
 
 	/*
@@ -314,6 +327,12 @@ public class TiffInputStream extends BufferedInputStream {
 		int tag = readSHORT();
 		if (INTEROPERABILITY_TAGS.containsKey(tag)) return INTEROPERABILITY_TAGS.get(tag);
 		else return new InteroperabilityTag(""+tag, tag);
+	}
+
+	public synchronized MakerNoteTag readMakerNoteTag() throws TiffProcessorException, IOException {
+		int tag = readSHORT();
+		if (MAKERNOTE_TAGS.containsKey(tag)) return MAKERNOTE_TAGS.get(tag);
+		else return new CanonMakerNoteTag(""+tag, tag);
 	}
 
 	public synchronized Type readType() throws TiffProcessorException, IOException {
