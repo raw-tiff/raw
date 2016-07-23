@@ -51,26 +51,26 @@ public final class ImageFileDirectoryLoader {
 	}
 
 	public ImageFileDirectory load() throws TiffProcessorException, IOException, FileNotFoundException, XMPException {
-		processIfd(ifd, Context.Main);
+		ifd(ifd, Context.Main);
 		return ifd;
 	}
 
 	private enum Context { Main, Interoperability, MakerNote }
 
 	@SuppressWarnings("unchecked")
-	private long processIfd(ImageFileDirectory ifd, Context context) throws IOException, TiffProcessorException {
+	private long ifd(ImageFileDirectory ifd, Context context) throws IOException, TiffProcessorException {
 
 		int entriescount = in.readSHORT();
 
 		switch (context) {
 			case Main:
-				for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readTag());
+				for (int i = 0; i < entriescount; i++) ifdEntry(ifd, in.readTag());
 			break;
 			case Interoperability:
-				for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readInteroperabilityTag());
+				for (int i = 0; i < entriescount; i++) ifdEntry(ifd, in.readInteroperabilityTag());
 			break;
 			case MakerNote:
-				for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readMakerNoteTag());
+				for (int i = 0; i < entriescount; i++) ifdEntry(ifd, in.readMakerNoteTag());
 			break;
 		}
 
@@ -81,22 +81,21 @@ public final class ImageFileDirectoryLoader {
 		if (ifd.containsKey(Tag.SubIFDs)) {
 			List<ImageFileDirectory> subIfds = new Vector<ImageFileDirectory>();
 			if (ifd.get(Tag.SubIFDs) instanceof List)
-				for (long subIfdOffset : ((List<Long>) ifd.get(Tag.SubIFDs))) subIfds.add(processIfd(subIfdOffset, Context.Main));
-			else subIfds.add(processIfd((long) ifd.get(Tag.SubIFDs), Context.Main));
+				for (long subIfdOffset : ((List<Long>) ifd.get(Tag.SubIFDs))) subIfds.add(ifd(subIfdOffset, Context.Main));
+			else subIfds.add(ifd((long) ifd.get(Tag.SubIFDs), Context.Main));
 			ifd.put(Tag.SubIFDs, subIfds);
 		}
 
 		if (ifd.containsKey(Tag.ExifIFD)) {
-
-			ImageFileDirectory exifIfd = processIfd((long) ifd.get(Tag.ExifIFD), Context.Main);
+			ImageFileDirectory exifIfd = ifd((long) ifd.get(Tag.ExifIFD), Context.Main);
 			exifIfd.put(Tag.ExifVersion, new String((byte[]) exifIfd.get(Tag.ExifVersion)));
-			if (exifIfd.containsKey(Tag.FlashPixVersion)) exifIfd.put(Tag.FlashPixVersion, new String((byte[]) exifIfd.get(Tag.FlashPixVersion)));
+			if (exifIfd.containsKey(Tag.FlashPixVersion))
+				exifIfd.put(Tag.FlashPixVersion, new String((byte[]) exifIfd.get(Tag.FlashPixVersion)));
 			ifd.put(Tag.ExifIFD, exifIfd);
-
 		}
 
 		if (ifd.containsKey(Tag.Interoperability)) {
-			ImageFileDirectory interoperabilityIFD = processIfd((long) ifd.get(Tag.Interoperability), Context.Interoperability);
+			ImageFileDirectory interoperabilityIFD = ifd((long) ifd.get(Tag.Interoperability), Context.Interoperability);
 			interoperabilityIFD.put(
 				InteroperabilityTag.InteroperabilityVersion,
 				new String((byte[]) interoperabilityIFD.get(InteroperabilityTag.InteroperabilityVersion)));
@@ -104,7 +103,7 @@ public final class ImageFileDirectoryLoader {
 		}
 
 		if (ifd.containsKey(Tag.MakerNote)) {
-			ImageFileDirectory makerNoteIFD = processIfd((long) ifd.get(Tag.MakerNote), Context.MakerNote);
+			ImageFileDirectory makerNoteIFD = ifd((long) ifd.get(Tag.MakerNote), Context.MakerNote);
 			ifd.put(Tag.MakerNote, makerNoteIFD);
 		}
 
@@ -129,21 +128,21 @@ public final class ImageFileDirectoryLoader {
 		while (nextOffset != 0) {
 			in.seek(nextOffset);
 			currentIfd.setNext(new ImageFileDirectory(in));
-			nextOffset = processIfd(currentIfd = currentIfd.getNext(), Context.Main);
+			nextOffset = ifd(currentIfd = currentIfd.getNext(), Context.Main);
 		}
 
 		return nextOffset;
 
 	}
 
-	private ImageFileDirectory processIfd(long offset, Context context) throws IOException, TiffProcessorException {
+	private ImageFileDirectory ifd(long offset, Context context) throws IOException, TiffProcessorException {
 		in.seek(offset);
 		ImageFileDirectory ifd = new ImageFileDirectory(in);
-		processIfd(ifd, context);
+		ifd(ifd, context);
 		return ifd;
 	}
 
-	private void processIfdEntry(ImageFileDirectory ifd, Tag tag) throws TiffProcessorException, IOException {
+	private void ifdEntry(ImageFileDirectory ifd, Tag tag) throws TiffProcessorException, IOException {
 
 		/*
 		 * See Exif Version 2.3, page 46
@@ -154,7 +153,7 @@ public final class ImageFileDirectoryLoader {
 		 */
 		if (tag.equals(Tag.MakerNote)) {
 			in.skip(6);
-			ifd.put(tag, processIfdEntryValue(Type.LONG, 1));
+			ifd.put(tag, ifdEntryValue(Type.LONG, 1));
 			return;
 		}
 
@@ -181,28 +180,28 @@ public final class ImageFileDirectoryLoader {
 			long offset = in.readOffset();
 			in.mark();
 			in.seek(offset);
-			ifd.put(tag, processIfdEntryValue(type, (int) count));
+			ifd.put(tag, ifdEntryValue(type, (int) count));
 			in.reset();
 		} else {
-			ifd.put(tag, processIfdEntryValue(type, (int) count));
+			ifd.put(tag, ifdEntryValue(type, (int) count));
 			in.skip(4 - type.size * count);
 		}
 
 	}
 
-	private Object processIfdEntryValue(Type type, int count) throws TiffProcessorException, IOException {
+	private Object ifdEntryValue(Type type, int count) throws TiffProcessorException, IOException {
 		switch (type) {
 			case ASCII    : return in.readASCII(count);
 			case BYTE     : return in.readBYTE(count);
 			case SBYTE    : return in.readSBYTE(count);
 			case UNDEFINED: return in.readSBYTE(count);
 			default       : return count == 1?
-								processIfdEntrySingleNumericValue(type):
-								processIfdEntryMultipleNumericValues(type, count);
+								ifdEntrySingleNumericValue(type):
+								ifdEntryMultipleNumericValues(type, count);
 		}
 	}
 
-	private Object processIfdEntrySingleNumericValue(Type type) throws IOException {
+	private Object ifdEntrySingleNumericValue(Type type) throws IOException {
 		switch (type) {
 			case SHORT    : return in.readSHORT();
 			case LONG     : return in.readLONG();
@@ -216,7 +215,7 @@ public final class ImageFileDirectoryLoader {
 		}
 	}
 
-	private Object processIfdEntryMultipleNumericValues(Type type, int count) throws IOException {
+	private Object ifdEntryMultipleNumericValues(Type type, int count) throws IOException {
 		switch (type) {
 			case SHORT:
 				int[] shorts = new int[count];
