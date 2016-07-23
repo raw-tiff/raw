@@ -39,76 +39,82 @@ import com.github.gasrios.raw.lang.TiffProcessorException;
 
 public final class TiffProcessorEngine {
 
-	private ImageFileDirectory ifd0;
+	private ImageFileDirectory ifd;
 	private TiffProcessor listener;
 
 	public TiffProcessorEngine(InputStream in, TiffProcessor listener) throws TiffProcessorException, IOException, XMPException {
-		ifd0 = (new ImageFileDirectoryLoader(new TiffInputStream(in))).load();
+		ifd = (new ImageFileDirectoryLoader(new TiffInputStream(in))).load();
 		this.listener = listener;
 	}
 
-	@SuppressWarnings("unchecked")
 	public void run() throws TiffProcessorException {
 
-		// TODO NewSubFileType is found in DNG files. Canon files (.CR2) do not have it.
-		if (ifd0.containsKey(Tag.NewSubFileType) && ((long) ifd0.get(Tag.NewSubFileType)) == 1) listener.thumbnailIfd(ifd0);
-		listener.firstIfd(ifd0);
-		ifd(ifd0);
-
-		// IFD chain. So far only seen in Canon's .CR2 files
-		ImageFileDirectory currentIfd = ifd0;
-		while (currentIfd.getNext() != null) {
-			listener.nextIfd(currentIfd.getNext());
-			ifd(currentIfd = currentIfd.getNext());
-		}
-
-		if (ifd0.containsKey(Tag.ExifIFD)) exifIfd((ImageFileDirectory) ifd0.get(Tag.ExifIFD));
-		if (ifd0.containsKey(Tag.XMP)) xmp((Map<String, String>) ifd0.get(Tag.XMP));
+		if (ifd.containsKey(Tag.NewSubFileType) && ((long) ifd.get(Tag.NewSubFileType)) == 1) listener.thumbnailIfd(ifd);
+		listener.firstIfd(ifd);
+		ifdChain(ifd);
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
-		ifd0 = null;
+		ifd = null;
 		System.gc();
 		listener.end();
 
 	}
 
+	private void ifdChain(ImageFileDirectory ifd) throws TiffProcessorException {
+		ifd(ifd);
+		ImageFileDirectory nextIfd = ifd;
+		while ((nextIfd = nextIfd.getNext()) != null) {
+			listener.nextIfd(nextIfd);
+			ifd(nextIfd);
+		}
+	}
+
 	private void ifd(ImageFileDirectory ifd) throws TiffProcessorException {
-
-		if (ifd.containsKey(Tag.NewSubFileType) && ((long) ifd.get(Tag.NewSubFileType)) == 0) listener.highResolutionIfd(ifd);
-		if (ifd.containsKey(Tag.NewSubFileType) && ((long) ifd.get(Tag.NewSubFileType)) == 1) listener.previewIfd(ifd);
-
-		listener.ifd(ifd);
-		for (Tag tag: ifd.keySet()) if (tag != Tag.SubIFDs && tag != Tag.ExifIFD && tag != Tag.XMP) listener.tag(tag, ifd.get(tag));
-
-		subIfds(ifd);
-
+		if (ifd.containsKey(Tag.NewSubFileType))
+			if (((long) ifd.get(Tag.NewSubFileType)) == 0) listener.highResolutionIfd(ifd);
+			else if (((long) ifd.get(Tag.NewSubFileType)) == 1) listener.previewIfd(ifd);
+		tags(ifd);
 	}
 
 	@SuppressWarnings("unchecked")
-	private void subIfds(ImageFileDirectory ifd) throws TiffProcessorException {
+	private void tags(ImageFileDirectory ifd) throws TiffProcessorException {
+
+		listener.ifd(ifd);
+
+		for (Tag tag: ifd.keySet())
+			if (tag != Tag.SubIFDs && tag != Tag.ExifIFD && tag != Tag.XMP && tag != Tag.Interoperability && tag != Tag.MakerNote)
+				listener.tag(tag, ifd.get(tag));
+
 		if (ifd.containsKey(Tag.SubIFDs) && !((List<ImageFileDirectory>) ifd.get(Tag.SubIFDs)).isEmpty())
-			for (ImageFileDirectory subIfd: (List<ImageFileDirectory>) ifd.get(Tag.SubIFDs)) ifd(subIfd);
+			ifds((List<ImageFileDirectory>) ifd.get(Tag.SubIFDs));
+
+		if (ifd.containsKey(Tag.ExifIFD)) exif((ImageFileDirectory) ifd.get(Tag.ExifIFD));
+
+		if (ifd.containsKey(Tag.XMP)) xmp((Map<String, String>) ifd.get(Tag.XMP));
+
+		if (ifd.containsKey(Tag.Interoperability)) interoperability((ImageFileDirectory) ifd.get(Tag.Interoperability));
+
+		if (ifd.containsKey(Tag.MakerNote)) makerNote((ImageFileDirectory) ifd.get(Tag.MakerNote));
+
 	}
 
-	private void exifIfd(ImageFileDirectory exifIfd) throws TiffProcessorException {
-		listener.exifIfd(exifIfd);
-		listener.ifd(exifIfd);
-		for (Tag tag: exifIfd.keySet()) if (tag != Tag.Interoperability && tag != Tag.MakerNote)
-			listener.tag(tag, exifIfd.get(tag));
-		if (exifIfd.containsKey(Tag.Interoperability)) interoperability((ImageFileDirectory) exifIfd.get(Tag.Interoperability));
-		if (exifIfd.containsKey(Tag.MakerNote)) makerNote((ImageFileDirectory) exifIfd.get(Tag.MakerNote));
+	private void ifds(List<ImageFileDirectory> ifds) throws TiffProcessorException {
+		for (ImageFileDirectory ifd: ifds) ifdChain(ifd);
 	}
 
-	private void interoperability(ImageFileDirectory interoperabilityIfd) throws TiffProcessorException {
-		listener.interoperabilityIfd(interoperabilityIfd);
-		listener.ifd(interoperabilityIfd);
-		for (Tag tag: interoperabilityIfd.keySet()) listener.tag(tag, interoperabilityIfd.get(tag));
+	private void exif(ImageFileDirectory ifd) throws TiffProcessorException {
+		listener.exifIfd(ifd);
+		ifdChain(ifd);
 	}
 
-	private void makerNote(ImageFileDirectory makerNoteIfd) throws TiffProcessorException {
-		listener.makerNoteIfd(makerNoteIfd);
-		listener.ifd(makerNoteIfd);
-		for (Tag tag: makerNoteIfd.keySet()) listener.tag(tag, makerNoteIfd.get(tag));
+	private void interoperability(ImageFileDirectory ifd) throws TiffProcessorException {
+		listener.interoperabilityIfd(ifd);
+		ifdChain(ifd);
+	}
+
+	private void makerNote(ImageFileDirectory ifd) throws TiffProcessorException {
+		listener.makerNoteIfd(ifd);
+		ifdChain(ifd);
 	}
 
 	private void xmp(Map<String, String> xmp) throws TiffProcessorException {

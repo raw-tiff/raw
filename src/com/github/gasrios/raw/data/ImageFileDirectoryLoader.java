@@ -51,20 +51,62 @@ public final class ImageFileDirectoryLoader {
 	}
 
 	public ImageFileDirectory load() throws TiffProcessorException, IOException, FileNotFoundException, XMPException {
+		processIfd(ifd, Context.Main);
+		return ifd;
+	}
 
-		long nextOffset = processIfd(ifd);
+	private enum Context { Main, Interoperability, MakerNote }
 
-		// Second pass: replace offsets to subIFDs with them and load XMP data
+	/*
+	 * TODO Try and read those as IFDs, see if it works?
+	 *
+	 * UserComment = java.lang.Byte[264] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
+	 * CameraInfo = java.lang.Byte[1536] { -86, -86, 104, 48, 104, 48, 88, 0, 123, 123... }
+	 * DustRemovalData = java.lang.Byte[1024] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
+	 * Flavor = java.lang.Byte[16448] { 64, 64, 0, 0, 3, 0, 0, 32, 0, 0... }
+	 * 16401 = java.lang.Byte[252] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
+	 * VignettingCorr = java.lang.Byte[116] { 0, 16, 116, 0, 1, 0, 0, 0, 0, 0... }
+	 * LensInfo = java.lang.Byte[30] { 0, 0, 0, 0, 3, 0, 0, 0, 62, 0... }
+	 */
+
+	@SuppressWarnings("unchecked")
+	private long processIfd(ImageFileDirectory ifd, Context context) throws IOException, TiffProcessorException {
+
+		int entriescount = in.readSHORT();
+
+		switch (context) {
+			case Main:
+				for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readTag());
+			break;
+			case Interoperability:
+				for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readInteroperabilityTag());
+			break;
+			case MakerNote:
+				for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readMakerNoteTag());
+			break;
+		}
+
+		long nextOffset = in.readOffset();
+
+		// Replace offsets with IFDs and load XMP data
+
+		if (ifd.containsKey(Tag.SubIFDs)) {
+			List<ImageFileDirectory> subIfds = new Vector<ImageFileDirectory>();
+			if (ifd.get(Tag.SubIFDs) instanceof List)
+				for (long subIfdOffset : ((List<Long>) ifd.get(Tag.SubIFDs))) subIfds.add(processIfd(subIfdOffset, Context.Main));
+			else subIfds.add(processIfd((long) ifd.get(Tag.SubIFDs), Context.Main));
+			ifd.put(Tag.SubIFDs, subIfds);
+		}
 
 		if (ifd.containsKey(Tag.ExifIFD)) {
 
-			ImageFileDirectory exifIfd = processIfd((long) ifd.get(Tag.ExifIFD));
+			ImageFileDirectory exifIfd = processIfd((long) ifd.get(Tag.ExifIFD), Context.Main);
 			exifIfd.put(Tag.ExifVersion, new String((byte[]) exifIfd.get(Tag.ExifVersion)));
 			if (exifIfd.containsKey(Tag.FlashPixVersion)) exifIfd.put(Tag.FlashPixVersion, new String((byte[]) exifIfd.get(Tag.FlashPixVersion)));
 			ifd.put(Tag.ExifIFD, exifIfd);
 
 			if (exifIfd.containsKey(Tag.Interoperability)) {
-				ImageFileDirectory interoperabilityIFD = processInteroperabilityIfd((long) exifIfd.get(Tag.Interoperability));
+				ImageFileDirectory interoperabilityIFD = processIfd((long) exifIfd.get(Tag.Interoperability), Context.Interoperability);
 				interoperabilityIFD.put(
 					InteroperabilityTag.InteroperabilityVersion,
 					new String((byte[]) interoperabilityIFD.get(InteroperabilityTag.InteroperabilityVersion)));
@@ -72,7 +114,7 @@ public final class ImageFileDirectoryLoader {
 			}
 
 			if (exifIfd.containsKey(Tag.MakerNote)) {
-				ImageFileDirectory makerNoteIFD = processMakerNoteIfd((long) exifIfd.get(Tag.MakerNote));
+				ImageFileDirectory makerNoteIFD = processIfd((long) exifIfd.get(Tag.MakerNote), Context.MakerNote);
 				exifIfd.put(Tag.MakerNote, makerNoteIFD);
 			}
 
@@ -99,67 +141,17 @@ public final class ImageFileDirectoryLoader {
 		while (nextOffset != 0) {
 			in.seek(nextOffset);
 			currentIfd.setNext(new ImageFileDirectory(in));
-			nextOffset = processIfd(currentIfd = currentIfd.getNext());
+			nextOffset = processIfd(currentIfd = currentIfd.getNext(), Context.Main);
 		}
 
-		return ifd;
+		return nextOffset;
 
 	}
 
-	@SuppressWarnings("unchecked")
-	// TODO check for next
-	private long processIfd(ImageFileDirectory ifd) throws IOException, TiffProcessorException {
-
-		int entriescount = in.readSHORT();
-
-		for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readTag());
-
-		long offset = in.readOffset();
-
-		if (ifd.containsKey(Tag.SubIFDs)) {
-			List<ImageFileDirectory> subIfds = new Vector<ImageFileDirectory>();
-			if (ifd.get(Tag.SubIFDs) instanceof List)
-				for (long subIfdOffset : ((List<Long>) ifd.get(Tag.SubIFDs))) subIfds.add(processIfd(subIfdOffset));
-			else subIfds.add(processIfd((long) ifd.get(Tag.SubIFDs)));
-			ifd.put(Tag.SubIFDs, subIfds);
-		}
-
-		return offset;
-
-	}
-
-	private ImageFileDirectory processIfd(long offset) throws IOException, TiffProcessorException {
+	private ImageFileDirectory processIfd(long offset, Context context) throws IOException, TiffProcessorException {
 		in.seek(offset);
 		ImageFileDirectory ifd = new ImageFileDirectory(in);
-		processIfd(ifd);
-		return ifd;
-	}
-
-	private ImageFileDirectory processInteroperabilityIfd(long offset) throws IOException, TiffProcessorException {
-		in.seek(offset);
-		ImageFileDirectory ifd = new ImageFileDirectory(in);
-		int entriescount = in.readSHORT();
-		for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readInteroperabilityTag());
-		return ifd;
-	}
-
-	/*
-	 * TODO Try and read those as IFDs, see if it works?
-	 *
-	 * ComponentsConfiguration = java.lang.Byte[4] { 1, 2, 3, 0 }
-	 * UserComment = java.lang.Byte[264] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
-	 * CameraInfo = java.lang.Byte[1536] { -86, -86, 104, 48, 104, 48, 88, 0, 123, 123... }
-	 * DustRemovalData = java.lang.Byte[1024] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
-	 * Flavor = java.lang.Byte[16448] { 64, 64, 0, 0, 3, 0, 0, 32, 0, 0... }
-	 * 16401 = java.lang.Byte[252] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
-	 * VignettingCorr = java.lang.Byte[116] { 0, 16, 116, 0, 1, 0, 0, 0, 0, 0... }
-	 * LensInfo = java.lang.Byte[30] { 0, 0, 0, 0, 3, 0, 0, 0, 62, 0... }
-	 */
-	private ImageFileDirectory processMakerNoteIfd(long offset) throws IOException, TiffProcessorException {
-		in.seek(offset);
-		ImageFileDirectory ifd = new ImageFileDirectory(in);
-		int entriescount = in.readSHORT();
-		for (int i = 0; i < entriescount; i++) processIfdEntry(ifd, in.readMakerNoteTag());
+		processIfd(ifd, context);
 		return ifd;
 	}
 
