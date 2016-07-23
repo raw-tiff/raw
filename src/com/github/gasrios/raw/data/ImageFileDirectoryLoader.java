@@ -57,18 +57,6 @@ public final class ImageFileDirectoryLoader {
 
 	private enum Context { Main, Interoperability, MakerNote }
 
-	/*
-	 * TODO Try and read those as IFDs, see if it works?
-	 *
-	 * UserComment = java.lang.Byte[264] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
-	 * CameraInfo = java.lang.Byte[1536] { -86, -86, 104, 48, 104, 48, 88, 0, 123, 123... }
-	 * DustRemovalData = java.lang.Byte[1024] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
-	 * Flavor = java.lang.Byte[16448] { 64, 64, 0, 0, 3, 0, 0, 32, 0, 0... }
-	 * 16401 = java.lang.Byte[252] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
-	 * VignettingCorr = java.lang.Byte[116] { 0, 16, 116, 0, 1, 0, 0, 0, 0, 0... }
-	 * LensInfo = java.lang.Byte[30] { 0, 0, 0, 0, 3, 0, 0, 0, 62, 0... }
-	 */
-
 	@SuppressWarnings("unchecked")
 	private long processIfd(ImageFileDirectory ifd, Context context) throws IOException, TiffProcessorException {
 
@@ -105,19 +93,19 @@ public final class ImageFileDirectoryLoader {
 			if (exifIfd.containsKey(Tag.FlashPixVersion)) exifIfd.put(Tag.FlashPixVersion, new String((byte[]) exifIfd.get(Tag.FlashPixVersion)));
 			ifd.put(Tag.ExifIFD, exifIfd);
 
-			if (exifIfd.containsKey(Tag.Interoperability)) {
-				ImageFileDirectory interoperabilityIFD = processIfd((long) exifIfd.get(Tag.Interoperability), Context.Interoperability);
-				interoperabilityIFD.put(
-					InteroperabilityTag.InteroperabilityVersion,
-					new String((byte[]) interoperabilityIFD.get(InteroperabilityTag.InteroperabilityVersion)));
-				exifIfd.put(Tag.Interoperability, interoperabilityIFD);
-			}
+		}
 
-			if (exifIfd.containsKey(Tag.MakerNote)) {
-				ImageFileDirectory makerNoteIFD = processIfd((long) exifIfd.get(Tag.MakerNote), Context.MakerNote);
-				exifIfd.put(Tag.MakerNote, makerNoteIFD);
-			}
+		if (ifd.containsKey(Tag.Interoperability)) {
+			ImageFileDirectory interoperabilityIFD = processIfd((long) ifd.get(Tag.Interoperability), Context.Interoperability);
+			interoperabilityIFD.put(
+				InteroperabilityTag.InteroperabilityVersion,
+				new String((byte[]) interoperabilityIFD.get(InteroperabilityTag.InteroperabilityVersion)));
+			ifd.put(Tag.Interoperability, interoperabilityIFD);
+		}
 
+		if (ifd.containsKey(Tag.MakerNote)) {
+			ImageFileDirectory makerNoteIFD = processIfd((long) ifd.get(Tag.MakerNote), Context.MakerNote);
+			ifd.put(Tag.MakerNote, makerNoteIFD);
 		}
 
 		if (ifd.containsKey(Tag.XMP)) {
