@@ -93,14 +93,22 @@ public final class TiffProcessorEngine {
 	private void exifIfd(ImageFileDirectory exifIfd) throws TiffProcessorException {
 		listener.exifIfd(exifIfd);
 		listener.ifd(exifIfd);
-		for (Tag tag: exifIfd.keySet()) if (tag != Tag.Interoperability) listener.tag(tag, exifIfd.get(tag));
+		for (Tag tag: exifIfd.keySet()) if (tag != Tag.Interoperability && tag != Tag.MakerNote)
+			listener.tag(tag, exifIfd.get(tag));
 		if (exifIfd.containsKey(Tag.Interoperability)) interoperability((ImageFileDirectory) exifIfd.get(Tag.Interoperability));
+		if (exifIfd.containsKey(Tag.MakerNote)) makerNote((ImageFileDirectory) exifIfd.get(Tag.MakerNote));
 	}
 
 	private void interoperability(ImageFileDirectory interoperabilityIfd) throws TiffProcessorException {
 		listener.interoperabilityIfd(interoperabilityIfd);
 		listener.ifd(interoperabilityIfd);
 		for (Tag tag: interoperabilityIfd.keySet()) listener.tag(tag, interoperabilityIfd.get(tag));
+	}
+
+	private void makerNote(ImageFileDirectory makerNoteIfd) throws TiffProcessorException {
+		listener.makerNoteIfd(makerNoteIfd);
+		listener.ifd(makerNoteIfd);
+		for (Tag tag: makerNoteIfd.keySet()) listener.tag(tag, makerNoteIfd.get(tag));
 	}
 
 	private void xmp(Map<String, String> xmp) throws TiffProcessorException {

@@ -39,6 +39,8 @@ public abstract class AbstractTiffProcessor implements TiffProcessor {
 
 	@Override public void interoperabilityIfd(ImageFileDirectory ifd) {}
 
+	@Override public void makerNoteIfd(ImageFileDirectory ifd) {}
+
 	@Override public void nextIfd(ImageFileDirectory ifd) throws TiffProcessorException {}
 
 	@Override public void tag(Tag tag, Object value) throws TiffProcessorException {}

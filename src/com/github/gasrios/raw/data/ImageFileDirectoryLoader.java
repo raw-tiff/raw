@@ -71,12 +71,10 @@ public final class ImageFileDirectoryLoader {
 				exifIfd.put(Tag.Interoperability, interoperabilityIFD);
 			}
 
-			/*
-			 * See Exif 2.3 Specification, page 46
-			 *
-			 * TODO MakerNote = java.lang.Byte[44926] { 39, 0, 1, 0, 3, 0, 49, 0, 0, 0... }
-			 * TODO UserComment = java.lang.Byte[264] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0... }
-			 */
+			if (exifIfd.containsKey(Tag.MakerNote)) {
+				ImageFileDirectory makerNoteIFD = processIfd((long) exifIfd.get(Tag.MakerNote));
+				exifIfd.put(Tag.MakerNote, makerNoteIFD);
+			}
 
 		}
 
@@ -109,6 +107,7 @@ public final class ImageFileDirectoryLoader {
 	}
 
 	@SuppressWarnings("unchecked")
+	// TODO check for next
 	private long processIfd(ImageFileDirectory ifd) throws IOException, TiffProcessorException {
 
 		int entriescount = in.readSHORT();
@@ -159,6 +158,16 @@ public final class ImageFileDirectoryLoader {
 
 		long count = in.readLONG();
 		if (count > 0xFFFFFFFFL) throw new TiffProcessorException("java arrays do not support lengths out of the positive integer range: " + count);
+
+		/*
+		 * See Exif Version 2.3, page 46
+		 *
+		 * TODO works for Canon, must test for other makers.
+		 */
+		if (tag.equals(Tag.MakerNote)) {
+			type = Type.LONG;
+			count = 1;
+		}
 
 		/*
 		 * See TIFF 6.0 Specification, page 15
