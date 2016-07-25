@@ -56,18 +56,18 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 	public LoadHighResolutionImage() { data = new HashMap<Object, Object>(); }
 
 	@Override public void firstIfd(ImageFileDirectory ifd) {
-		data.put(Tag.AsShotNeutral, ifd.get(Tag.AsShotNeutral));
-		data.put(Tag.CalibrationIlluminant1, ifd.get(Tag.CalibrationIlluminant1));
-		data.put(Tag.CalibrationIlluminant2, ifd.get(Tag.CalibrationIlluminant2));
-		data.put(Tag.CameraCalibration1, ifd.get(Tag.CameraCalibration1));
-		data.put(Tag.ForwardMatrix1, ifd.get(Tag.ForwardMatrix1));
-		data.put(Tag.ForwardMatrix2, ifd.get(Tag.ForwardMatrix2));
+		data.put(Tag.AsShotNeutral,				ifd.get(Tag.AsShotNeutral));
+		data.put(Tag.CalibrationIlluminant1,	ifd.get(Tag.CalibrationIlluminant1));
+		data.put(Tag.CalibrationIlluminant2,	ifd.get(Tag.CalibrationIlluminant2));
+		data.put(Tag.CameraCalibration1,		ifd.get(Tag.CameraCalibration1));
+		data.put(Tag.ForwardMatrix1,			ifd.get(Tag.ForwardMatrix1));
+		data.put(Tag.ForwardMatrix2,			ifd.get(Tag.ForwardMatrix2));
 	}
 
 	@Override public void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
 
-		data.put(Tag.BitsPerSample, ifd.get(Tag.BitsPerSample));
-		data.put(Tag.SamplesPerPixel, ifd.get(Tag.SamplesPerPixel));
+		data.put(Tag.BitsPerSample,		ifd.get(Tag.BitsPerSample));
+		data.put(Tag.SamplesPerPixel,	ifd.get(Tag.SamplesPerPixel));
 
 		/*
 		 * See See Digital Negative Specification Version 1.4.0.0, page 79
@@ -88,7 +88,6 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 		 * calibration illuminant temperatures, then invert all the temperatures and use linear interpolation. Otherwise, use
 		 * the closest calibration tag set.
 		 */
-
 		double[] cameraNeutral = RATIONAL.asDoubleArray((RATIONAL[]) data.get(Tag.AsShotNeutral));
 
 		/*
@@ -134,6 +133,7 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 			short[] strip;
 			strip = ifd.getStripAsShortArray(i);
 			for (int j = 0; pixelSize*j < strip.length; j = j + 1) {
+				// TODO assuming SamplesPerPixel = 3. See Tags ReductionMatrix1 and ReductionMatrix2.
 				double[] XYZ = com.github.gasrios.raw.lang.Math.multiply(cameraToXYZ_D50, readPixel(strip, j*pixelSize, ifd.getByteOrder()));
 				if (minX > XYZ[0]) minX = XYZ[0];
 				if (maxX < XYZ[0]) maxX = XYZ[0];
@@ -216,7 +216,6 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 	// TODO Assuming in the conversion pixel data is always unsigned. Double check this.
 	private double[] readPixel(short[] strip, int offset, ByteOrder byteOrder) {
 
-		// TODO assuming SamplesPerPixel = 3. See Tags ReductionMatrix1 and ReductionMatrix2.
 		int samplesPerPixel = ((int) data.get(Tag.SamplesPerPixel));
 		int[] bitsPerSample = (int[]) data.get(Tag.BitsPerSample);
 
