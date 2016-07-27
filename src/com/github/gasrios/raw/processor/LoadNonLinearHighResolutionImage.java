@@ -25,15 +25,21 @@ import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.github.gasrios.raw.data.Illuminant;
 import com.github.gasrios.raw.data.ImageFileDirectory;
 import com.github.gasrios.raw.data.Tag;
 import com.github.gasrios.raw.io.TiffInputStream;
+import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.lang.RATIONAL;
+import com.github.gasrios.raw.lang.SRATIONAL;
 import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.swing.ImageFrame;
 import com.github.gasrios.raw.swing.ImageSRGB;
 
 public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
+
+	private static final Map<Integer, Illuminant> ILLUMINANTS = new HashMap<Integer, Illuminant>();
+	static { for (Illuminant illuminant: Illuminant.values()) ILLUMINANTS.put(illuminant.value, illuminant); }
 
 	protected Map<Object, Object> data;
 
@@ -41,7 +47,14 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 
 	public LoadNonLinearHighResolutionImage() { data = new HashMap<Object, Object>(); }
 
-	@Override public void firstIfd(ImageFileDirectory ifd) {}
+	@Override public void firstIfd(ImageFileDirectory ifd) {
+		data.put(Tag.AsShotNeutral,				ifd.get(Tag.AsShotNeutral));
+		data.put(Tag.CalibrationIlluminant1,	ifd.get(Tag.CalibrationIlluminant1));
+		data.put(Tag.CalibrationIlluminant2,	ifd.get(Tag.CalibrationIlluminant2));
+		data.put(Tag.CameraCalibration1,		ifd.get(Tag.CameraCalibration1));
+		data.put(Tag.ForwardMatrix1,			ifd.get(Tag.ForwardMatrix1));
+		data.put(Tag.ForwardMatrix2,			ifd.get(Tag.ForwardMatrix2));
+	}
 
 	/*
 	 * Read active area and determine crop area. All coordinates are [top, left, bottom, right], following the convention
@@ -59,88 +72,49 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 	 */
 	@Override public void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
 
-		int width   = (int) (long) ifd.get(Tag.ImageWidth);
-		int length  = (int) (long) ifd.get(Tag.ImageLength);
-
-		System.out.println("Width: " + width);
-		System.out.println("Length: " + length);
-
-		long[] activeArea = (long[]) ifd.get(Tag.ActiveArea);
-		for (int i = 0; i < activeArea.length; i++) activeArea[i]--;
-
-		System.out.print("Active area: ");
-		for (int i = 0; i < activeArea.length; i++) System.out.print(activeArea[i] + ", ");
-		System.out.println();
-
-		RATIONAL[] defaultCropOrigin = (RATIONAL[]) ifd.get(Tag.DefaultCropOrigin);
-		RATIONAL[] defaultCropSize = (RATIONAL[]) ifd.get(Tag.DefaultCropSize);
-
-		long[] cropArea = new long[] {
-			activeArea[0] + defaultCropOrigin[1].longValue(),
-			activeArea[1] + defaultCropOrigin[0].longValue(),
-			activeArea[0] + defaultCropOrigin[1].longValue() + defaultCropSize[1].longValue(),
-			activeArea[1] + defaultCropOrigin[0].longValue() + defaultCropSize[0].longValue()
-		};
-
-		System.out.print("Crop area: ");
-		for (int i = 0; i < cropArea.length; i++) System.out.print(cropArea[i] + ", ");
-		System.out.println();
-
 		/*
-		 * CFA pattern
-		 *	RG
-		 *	GB
+		 * Step 1: read sensor data
 		 */
 
+		// Image size
+		int		width				= (int) (long) ifd.get(Tag.ImageWidth);
+		int		length				= (int) (long) ifd.get(Tag.ImageLength);
+
+		// CFA pattern description
 		short[]	planeColor			= (short[])	ifd.get(Tag.CFAPlaneColor);
-		short[]	cfaPattern			= (short[])	ifd.get(Tag.CFAPattern);
+		short[]	pattern				= (short[])	ifd.get(Tag.CFAPattern);
 		int[]	repeatPatternDim	= (int[])	ifd.get(Tag.CFARepeatPatternDim);
-		int[][]	pattern				= new int[repeatPatternDim[0]][repeatPatternDim[1]];
 
-		for (int i = 0; i < pattern.length; i++)  for (int j = 0; j < pattern[i].length; j++)
-			pattern[i][j] = planeColor[cfaPattern[2*i+j]];
-
-		System.out.println("Pattern");
-		for (int i = 0; i < pattern.length; i++) {
-			System.out.print("\t");
-			for (int j = 0; j < pattern[i].length; j++)
-				System.out.print(pattern[i%pattern.length][j%pattern[i%pattern.length].length]);
-			System.out.println();
-		}
-
-		/*
-		 * Start here
-		 */
-
-		int		samplesPerPixel	= (int)		ifd.get(Tag.SamplesPerPixel);
-		int[]	bitsPerSample	= (int[])	ifd.get(Tag.BitsPerSample);
-
-		int pixelSize = 0;
+		// Pixel description
+		int		samplesPerPixel		= (int)		ifd.get(Tag.SamplesPerPixel);
+		int[]	bitsPerSample		= (int[])	ifd.get(Tag.BitsPerSample);
+		int		pixelSize			= 0;
 		for (int i = 0; i < samplesPerPixel; i++) pixelSize += 1 + (bitsPerSample [i]-1)/8;
 
-		System.out.println("Pixel size: " + pixelSize);
+		// Active sensor pixels (All others should be ignored)
+		int		activeWMin			= (int) ((long[]) ifd.get(Tag.ActiveArea))[1];
+		int		activeLMin			= (int) ((long[]) ifd.get(Tag.ActiveArea))[0];
+		int		activeWMax			= (int) ((long[]) ifd.get(Tag.ActiveArea))[3] - activeWMin;
+		int		activeLMax			= (int) ((long[]) ifd.get(Tag.ActiveArea))[2] - activeLMin;
 
-		// TODO size image to active area. read only useful pixels in it.
-		image = new double[(int) (1+activeArea[3]-activeArea[1])][(int) (1+activeArea[2]-activeArea[0])][];
+		// TODO can be SHORT or LONG
+		int rowsPerStrip = (int) (long) ifd.get(Tag.RowsPerStrip);
 
-		System.out.println("Image: 0, 0, " + (image[0].length) + ", " + (image.length));
+		System.out.print("Reading sensor data...");
 
 		// See TIFF 6.0 Specification, page 39
-		int minW = width, minL = length, maxW = 0, maxL = 0;
-		int rowsPerStrip = (int) (long) ifd.get(Tag.RowsPerStrip);
-		for (int i = 0; i < (int) ((length + rowsPerStrip - 1) / rowsPerStrip); i++) {
+		double[][][] image = new double[activeWMax][activeLMax][3];
+		int[] colors = new int[3];
+		for (int i = 0; i < (length + rowsPerStrip - 1) / rowsPerStrip; i++) {
 			short[] strip = ifd.getStripAsShortArray(i);
-			for (int j = 0; pixelSize*j < strip.length; j = j + 1) {
-				int w = j%width - (int) activeArea[1];
-				int l = j/width+i*rowsPerStrip - (int) activeArea[0];
-				// Active area: 51, 142, 3516, 5344 [top, left, bottom, right] [minL, minW, maxL, maxW]
-				if (l < 0 || w < 0 || l > activeArea[2] || w > activeArea[3]) continue;
-				image[w][l] = new double[3];
-				minL = minL>l? l: minL;
-				minW = minW>w? w: minW;
-				maxL = maxL<l? l: maxL;
-				maxW = maxW<w? w: maxW;
-				image[w][l][pattern[w%pattern.length][l%pattern[w%pattern.length].length]] =
+			for (int j = 0; j*pixelSize < strip.length; j = j + 1) {
+				int w = j%width - activeWMin;
+				int l = j/width + i*rowsPerStrip - activeLMin;
+				if (w < 0 || w > activeWMax || l < 0 || l > activeLMax) continue;
+				// See TIFF/EP, page 26
+				short color = planeColor[pattern[w%repeatPatternDim[0]*2 + l%repeatPatternDim[1]]];
+				colors[color]++;
+				image[w][l][color] =
 					// TODO assuming SamplesPerPixel = 1
 					readPixel(
 						strip,
@@ -152,13 +126,153 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 			}
 		}
 
-		System.out.println("Min length: " + minL);
-		System.out.println("Min width: " + minW);
-		System.out.println("Max length: " + maxL);
-		System.out.println("Max width: " + maxW);
+		/*
+		 * TODO validate
+		 *
+		 * R: 4507533
+		 * G: 9012465
+		 * B: 4504932
+		 */
+		for (int s : colors) {
+			System.out.println(s);
+		}
 
-		new ImageFrame(new ImageSRGB(image), 1075, 716);
+		System.out.println(" done.");
 
+		/*
+		 * Step 2: demosaicing & converto to XYZ D50
+		 */
+
+		/*
+		 * See See Digital Negative Specification Version 1.4.0.0, page 79
+		 *
+		 * DNG provides for one or two sets of color calibration tags, each set optimized for a different illuminant. If both
+		 * sets of color calibration tags are included, then the raw converter should interpolate between the calibrations based
+		 * on the white balance selected by the user.
+		 *
+		 * If two calibrations are included, then it is recommended that one of the calibrations be for a low color temperature
+		 * illuminant (e.g., Standard-A) and the second calibration illuminant be for a higher color temperature illuminant
+		 * (e.g., D55 or D65). This combination has been found to work well for a wide range of real-world digital camera images.
+		 *
+		 * DNG versions earlier than 1.2.0.0 allow the raw converter to choose the interpolation algorithm. DNG 1.2.0.0 and
+		 * later requires a specific interpolation algorithm: linear interpolation using inverse correlated color temperature.
+		 *
+		 * To find the interpolation weighting factor between the two tag sets, find the correlated color temperature for the
+		 * user-selected white balance and the two calibration illuminants. If the white balance temperature is between two
+		 * calibration illuminant temperatures, then invert all the temperatures and use linear interpolation. Otherwise, use
+		 * the closest calibration tag set.
+		 */
+		double[] cameraNeutral = RATIONAL.asDoubleArray((RATIONAL[]) data.get(Tag.AsShotNeutral));
+
+		/*
+		 * Calculate the interpolation weighting factor associated with tag AsShotNeutral. Oddly enough, cameraToXYZ_D50 correctly
+		 * maps AsShotNeutral to D50 white point for any interpolation weighting factor. This is very good but rather unexpected.
+		 * A nice collateral effect is we do not need to iterate over weight to find the right value, just once is enough.
+		 * 
+		 * For the first step we assume weight = 0.5
+		 *
+		 * Remember we interpolate over the *inverse* of CCT, so bigger becomes smaller and we need to subtract one from the
+		 * interpolation to get the correct weight.
+		 */
+		double weight =
+			1D - Math.normalize(
+				1/ILLUMINANTS.get((int) data.get(Tag.CalibrationIlluminant2)).cct,
+				1/cct(XYZ2xy(Math.multiply(cameraToXYZ_D50(0.5D, cameraNeutral), cameraNeutral))),
+				1/ILLUMINANTS.get((int) data.get(Tag.CalibrationIlluminant1)).cct
+			);
+
+		double[][] cameraToXYZ_D50 = cameraToXYZ_D50(weight, cameraNeutral);
+
+		RATIONAL[] defaultCropOrigin = (RATIONAL[]) ifd.get(Tag.DefaultCropOrigin);
+		RATIONAL[] defaultCropSize = (RATIONAL[]) ifd.get(Tag.DefaultCropSize);
+
+		// Valid cropping interval
+		int		cropWMin			= defaultCropOrigin[0].intValue();
+		int		cropLMin			= defaultCropOrigin[1].intValue();
+		int		cropWMax			= defaultCropSize[0].intValue();
+		int		cropLMax			= defaultCropSize[1].intValue();
+
+		System.out.println("Width : " + width);
+		System.out.println("Length: " + length);
+		System.out.println("Active: " + activeWMin + ", " + activeLMin + ", " + activeWMax + ", " + activeLMax);
+		System.out.println("Crop  : " + cropWMin   + ", " + cropLMin   + ", " + cropWMax   + ", " + cropLMax);
+
+		System.out.print("Converting image...");
+
+		this.image = new double[cropWMax][cropLMax][];
+		for (int w = 0; w < cropWMax; w++) for (int l = 0; l < cropLMax; l++)
+			this.image[w][l] = Math.multiply(cameraToXYZ_D50, demosaice(image, w + cropWMin, l + cropLMin));
+
+		System.out.println(" done.");
+
+		System.out.println("Preparing to display image...");
+
+		new ImageFrame(new ImageSRGB(this.image), 1075, 716);
+
+		System.out.println(" done.");
+
+	}
+
+	// http://www.brucelindbloom.com/index.html?Eqn_XYZ_to_xyY.html
+	private double[] XYZ2xy(double[] XYZ) { return new double[] { XYZ[0]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1] }; }
+
+	/*
+	 * McCamy's cubic approximation (http://en.wikipedia.org/wiki/Color_temperature#Approximation)
+	 *
+	 * CCT(x, y) = -449*n^3 + 3525*n^2 - 6823,3*n + 5520,33
+	 *
+	 * Where
+	 *
+	 * n = (x - 0,3320)/(y - 0,1858)
+	 *
+	 * The maximum absolute error for color temperatures ranging from 2856 K (illuminant A) to 6504 K (D65) is under 2 K.
+	 */
+	private double cct(double[] chromaticityCoordinates) {
+		double n = (chromaticityCoordinates[0] - 0.3320D)/(chromaticityCoordinates[1] - 0.1858D);
+		return -449D*java.lang.Math.pow(n, 3D) + 3525D*java.lang.Math.pow(n, 2D) - 6823.3D*n + 5520.33D;
+	}
+
+	/*
+	 * See Digital Negative Specification Version 1.4.0.0, Chapter 6: "Mapping Camera Color Space to CIE XYZ Space"
+	 *
+	 * CameraToXYZ_D50 = FM * D * Inverse(AB * CC)
+	 *
+	 * 1. FM: 3-by-n matrix interpolated from the ForwardMatrix1 and ForwardMatrix2 tags.
+	 *
+	 * 2. D can be computed by finding the neutral for the reference camera:
+	 *
+	 * D = Invert(AsDiagonalMatrix(ReferenceNeutral))
+	 *
+	 * ReferenceNeutral = Inverse(AB * CC) * CameraNeutral
+	 *
+	 * CameraNeutral = AsShotNeutral
+	 *
+	 * 3. AB: n-by-n matrix, which is zero except for the diagonal entries, which are defined by the AnalogBalance tag.
+	 *
+	 * For linear DNG files AnalogBalance = [ 1 1 1 ] and hence AB is the identity matrix.
+	 *
+	 * 4. CC: n-by-n matrix interpolated from the CameraCalibration1 and CameraCalibration2 tags
+	 *
+	 * If CameraCalibration1 = CameraCalibration2 we can use either and there is no need to interpolate.
+	 */
+	private double[][] cameraToXYZ_D50(double weight, double[] cameraNeutral) {
+		double[][] inverseCC = Math.inverse(Math.vector2Matrix(SRATIONAL.asDoubleArray((SRATIONAL[]) data.get(Tag.CameraCalibration1))));
+		return
+			Math.multiply(
+				Math.multiply(
+					Math.weightedAverage(
+						Math.vector2Matrix(SRATIONAL.asDoubleArray((SRATIONAL[]) data.get(Tag.ForwardMatrix1))),
+						Math.vector2Matrix(SRATIONAL.asDoubleArray((SRATIONAL[]) data.get(Tag.ForwardMatrix2))),
+						weight
+					),
+					Math.inverse(Math.asDiagonalMatrix(com.github.gasrios.raw.lang.Math.multiply(inverseCC, cameraNeutral)))
+				),
+				inverseCC
+			);
+	}
+
+	private double[] demosaice(double[][][] image, int w, int l) {
+		return image[w][l];
 	}
 
 	private double[] readPixel(short[] strip, int offset, int samplesPerPixel, int[] bitsPerSample, ByteOrder byteOrder) {
