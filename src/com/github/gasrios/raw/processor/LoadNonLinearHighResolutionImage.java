@@ -56,205 +56,138 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 		data.put(Tag.ForwardMatrix2,			ifd.get(Tag.ForwardMatrix2));
 	}
 
-	/*
-	 * Read active area and determine crop area. All coordinates are [top, left, bottom, right], following the convention
-	 * stablished by ActiveArea. Orientation does not affect this and is only relevant when displaying the image (that
-	 * is, cæteris paribus, two images with orientation 1 and 8 will not have any of the information below different from
-	 * each other).
-	 *
-	 * ActiveArea can be thought of as two bi-dimensional coordinates: [top, left], [bottom, right]. The values
-	 * returned for bottom and right are compatible respectively with ImageLength and ImageWidth, so the X coordinate
-	 * is associated with length, and Y with width. If one thinks of "width" as the extent from side to side, this may
-	 * be counterintuitive, as X is usually the horizontal axis.
-	 *
-	 * To make matters worse, this offends the convention adopted in both DefaultCropOrigin and DefaultCropSize, which
-	 * uses width for X and length for Y.
-	 */
 	@Override public void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
 
 		/*
-		 * Step 1: read sensor data
+		 * Image size, active area and crop area. See
+		 *
+		 * http://www.barrypearson.co.uk/articles/dng/specification.htm#areas
+		 *
+		 * Orientation is irrelevant here. It only matters when displaying the image (that is, cæteris paribus, two images
+		 * with orientation 1 and 8 will not have any of the information below different from each other).
+		 *
+		 * The ActiveArea array  can be thought of as two bi-dimensional coordinates: [top, left], [bottom, right]. The values
+		 * returned for bottom and right are compatible respectively with ImageLength and ImageWidth, so the X coordinate is
+		 * associated with length, and Y with width. If one thinks of "width" as the extent from side to side, this may be
+		 * counterintuitive, as X is usually the horizontal axis.
+		 *
+		 * To make matters worse, this offends the convention adopted in both DefaultCropOrigin and DefaultCropSize, which
+		 * uses width for X and length for Y.
 		 */
 
 		// Image size
-		int		width				= (int) (long) ifd.get(Tag.ImageWidth);
-		int		length				= (int) (long) ifd.get(Tag.ImageLength);
-
-		// CFA pattern description
-		short[]	planeColor			= (short[])	ifd.get(Tag.CFAPlaneColor);
-		short[]	pattern				= (short[])	ifd.get(Tag.CFAPattern);
-		int[]	repeatPatternDim	= (int[])	ifd.get(Tag.CFARepeatPatternDim);
-
-		// Pixel description
-		int		samplesPerPixel		= (int)		ifd.get(Tag.SamplesPerPixel);
-		int[]	bitsPerSample		= (int[])	ifd.get(Tag.BitsPerSample);
-		int		pixelSize			= 0;
-		for (int i = 0; i < samplesPerPixel; i++) pixelSize += 1 + (bitsPerSample [i]-1)/8;
+		int		width					= (int) (long)		ifd.get(Tag.ImageWidth);
+		int		length					= (int) (long)		ifd.get(Tag.ImageLength);
 
 		// Active sensor pixels (All others should be ignored)
-		int		activeWMin			= (int) ((long[]) ifd.get(Tag.ActiveArea))[1];
-		int		activeLMin			= (int) ((long[]) ifd.get(Tag.ActiveArea))[0];
-		int		activeWMax			= (int) ((long[]) ifd.get(Tag.ActiveArea))[3] - activeWMin;
-		int		activeLMax			= (int) ((long[]) ifd.get(Tag.ActiveArea))[2] - activeLMin;
+		int		activeWMin				= (int) ((long[])	ifd.get(Tag.ActiveArea))[1];
+		int		activeLMin				= (int) ((long[])	ifd.get(Tag.ActiveArea))[0];
+		int		activeWMax				= (int) ((long[])	ifd.get(Tag.ActiveArea))[3] - activeWMin;
+		int		activeLMax				= (int) ((long[])	ifd.get(Tag.ActiveArea))[2] - activeLMin;
 
-		// TODO can be SHORT or LONG
-		int rowsPerStrip = (int) (long) ifd.get(Tag.RowsPerStrip);
+		// Valid cropping interval
+		int			cropWMin			= ((RATIONAL[])		ifd.get(Tag.DefaultCropOrigin))[0].intValue();
+		int			cropLMin			= ((RATIONAL[])		ifd.get(Tag.DefaultCropOrigin))[1].intValue();
+		int			cropWMax			= ((RATIONAL[])		ifd.get(Tag.DefaultCropSize))[0].intValue();
+		int			cropLMax			= ((RATIONAL[])		ifd.get(Tag.DefaultCropSize))[1].intValue();
 
-		System.out.print("Reading sensor data...");
+		// CFA pattern description
+		short[]	planeColor				= (short[])			ifd.get(Tag.CFAPlaneColor);
+		short[]	pattern					= (short[])			ifd.get(Tag.CFAPattern);
+		int[]	repeatPatternDim		= (int[])			ifd.get(Tag.CFARepeatPatternDim);
+
+		// Pixel description
+		int		samplesPerPixel			= (int)				ifd.get(Tag.SamplesPerPixel);
+		int[]	bitsPerSample			= (int[])			ifd.get(Tag.BitsPerSample);
+		int		pixelSize				= 0;
+		for (int i = 0; i < samplesPerPixel; i++) pixelSize += 1 + (bitsPerSample [i] - 1)/8;
+
+		data.put(Tag.SamplesPerPixel, samplesPerPixel);
+		data.put(Tag.BitsPerSample, bitsPerSample);
+		data.put(ByteOrder.class, ifd.getByteOrder());
 
 		// See TIFF 6.0 Specification, page 39
+		// TODO can be SHORT or LONG
+		int rowsPerStrip = (int) (long) ifd.get(Tag.RowsPerStrip);
 		double[][][] image = new double[activeWMax][activeLMax][3];
-		int[] colors = new int[3];
 		for (int i = 0; i < (length + rowsPerStrip - 1) / rowsPerStrip; i++) {
 			short[] strip = ifd.getStripAsShortArray(i);
 			for (int j = 0; j*pixelSize < strip.length; j = j + 1) {
+
 				int w = j%width - activeWMin;
 				int l = j/width + i*rowsPerStrip - activeLMin;
+
 				if (w < 0 || w > activeWMax || l < 0 || l > activeLMax) continue;
 				// See TIFF/EP, page 26
-				short color = planeColor[pattern[w%repeatPatternDim[0]*2 + l%repeatPatternDim[1]]];
-				colors[color]++;
-				image[w][l][color] =
+				// TODO Is the mask being correctly applied?
+				image[w][l][planeColor[pattern[(w + activeWMin)%repeatPatternDim[0]*2 + (l + activeLMin)%repeatPatternDim[1]]]] =
 					// TODO assuming SamplesPerPixel = 1
-					readPixel(
-						strip,
-						j*pixelSize,
-						samplesPerPixel,
-						bitsPerSample,
-						ifd.getByteOrder()
-					)[0];
+					readPixel(strip, j*pixelSize)[0];
 			}
 		}
 
-		/*
-		 * TODO validate
-		 *
-		 * R: 4507533
-		 * G: 9012465
-		 * B: 4504932
-		 */
-		for (int s : colors) {
-			System.out.println(s);
-		}
-
-		System.out.println(" done.");
-
-		/*
-		 * Step 2: demosaicing & converto to XYZ D50
-		 */
-
-		/*
-		 * See See Digital Negative Specification Version 1.4.0.0, page 79
-		 *
-		 * DNG provides for one or two sets of color calibration tags, each set optimized for a different illuminant. If both
-		 * sets of color calibration tags are included, then the raw converter should interpolate between the calibrations based
-		 * on the white balance selected by the user.
-		 *
-		 * If two calibrations are included, then it is recommended that one of the calibrations be for a low color temperature
-		 * illuminant (e.g., Standard-A) and the second calibration illuminant be for a higher color temperature illuminant
-		 * (e.g., D55 or D65). This combination has been found to work well for a wide range of real-world digital camera images.
-		 *
-		 * DNG versions earlier than 1.2.0.0 allow the raw converter to choose the interpolation algorithm. DNG 1.2.0.0 and
-		 * later requires a specific interpolation algorithm: linear interpolation using inverse correlated color temperature.
-		 *
-		 * To find the interpolation weighting factor between the two tag sets, find the correlated color temperature for the
-		 * user-selected white balance and the two calibration illuminants. If the white balance temperature is between two
-		 * calibration illuminant temperatures, then invert all the temperatures and use linear interpolation. Otherwise, use
-		 * the closest calibration tag set.
-		 */
+		// See See Digital Negative Specification Version 1.4.0.0, page 79
 		double[] cameraNeutral = RATIONAL.asDoubleArray((RATIONAL[]) data.get(Tag.AsShotNeutral));
 
 		/*
-		 * Calculate the interpolation weighting factor associated with tag AsShotNeutral. Oddly enough, cameraToXYZ_D50 correctly
-		 * maps AsShotNeutral to D50 white point for any interpolation weighting factor. This is very good but rather unexpected.
-		 * A nice collateral effect is we do not need to iterate over weight to find the right value, just once is enough.
+		 * Oddly enough, cameraToXYZ_D50 correctly maps AsShotNeutral to D50 white point for any interpolation weighting
+		 * factor. This is very good but rather unexpected. A nice collateral effect is we do not need to iterate over weight
+		 * to find the right value, just once is enough.
 		 * 
 		 * For the first step we assume weight = 0.5
-		 *
-		 * Remember we interpolate over the *inverse* of CCT, so bigger becomes smaller and we need to subtract one from the
-		 * interpolation to get the correct weight.
 		 */
-		double weight =
+		double[][] cameraToXYZ_D50 = cameraToXYZ_D50(
 			1D - Math.normalize(
 				1/ILLUMINANTS.get((int) data.get(Tag.CalibrationIlluminant2)).cct,
 				1/cct(XYZ2xy(Math.multiply(cameraToXYZ_D50(0.5D, cameraNeutral), cameraNeutral))),
 				1/ILLUMINANTS.get((int) data.get(Tag.CalibrationIlluminant1)).cct
-			);
-
-		double[][] cameraToXYZ_D50 = cameraToXYZ_D50(weight, cameraNeutral);
-
-		RATIONAL[] defaultCropOrigin = (RATIONAL[]) ifd.get(Tag.DefaultCropOrigin);
-		RATIONAL[] defaultCropSize = (RATIONAL[]) ifd.get(Tag.DefaultCropSize);
-
-		// Valid cropping interval
-		int		cropWMin			= defaultCropOrigin[0].intValue();
-		int		cropLMin			= defaultCropOrigin[1].intValue();
-		int		cropWMax			= defaultCropSize[0].intValue();
-		int		cropLMax			= defaultCropSize[1].intValue();
-
-		System.out.println("Width : " + width);
-		System.out.println("Length: " + length);
-		System.out.println("Active: " + activeWMin + ", " + activeLMin + ", " + activeWMax + ", " + activeLMax);
-		System.out.println("Crop  : " + cropWMin   + ", " + cropLMin   + ", " + cropWMax   + ", " + cropLMax);
-
-		System.out.print("Converting image...");
+			),
+			cameraNeutral
+		);
 
 		this.image = new double[cropWMax][cropLMax][];
 		for (int w = 0; w < cropWMax; w++) for (int l = 0; l < cropLMax; l++)
 			this.image[w][l] = Math.multiply(cameraToXYZ_D50, demosaice(image, w + cropWMin, l + cropLMin));
 
-		System.out.println(" done.");
-
-		System.out.println("Preparing to display image...");
-
 		new ImageFrame(new ImageSRGB(this.image), 1075, 716);
 
-		System.out.println(" done.");
+	}
+
+	// TODO implement demosaicing algorithm
+	private double[] demosaice(double[][][] image, int w, int l) {
+		return image[w][l];
+	}
+
+	private double[] readPixel(short[] strip, int offset) {
+
+		int samplesPerPixel	= (int) data.get(Tag.SamplesPerPixel);
+		int[] bitsPerSample	= (int[]) data.get(Tag.BitsPerSample);
+		ByteOrder byteOrder	= (ByteOrder) data.get(ByteOrder.class);
+		double[] pixel		= new double[samplesPerPixel];
+
+		for (int i = 0; i < samplesPerPixel; i++) {
+			// TODO Assuming pixel data is unsigned.
+			if (bitsPerSample[i] <= 8) {
+				short[] sample = new short[1];
+				System.arraycopy(strip, offset, sample, 0, 1);
+				pixel[i] = sample[0]/(double) 0xFF;
+			} else if (bitsPerSample[i] <= 16) {
+				short[] sample = new short[2];
+				System.arraycopy(strip, offset, sample, 0, 2);
+				pixel[i] = TiffInputStream.toInt(sample, byteOrder)/(double) 0xFFFF;
+			} else if (bitsPerSample[i] <= 32) {
+				short[] sample = new short[4];
+				System.arraycopy(strip, offset, sample, 0, 4);
+				pixel[i] = TiffInputStream.toLong(sample, byteOrder)/(double) 0xFFFFFFFF;
+			}
+			offset += 1 + (bitsPerSample[i]-1)/8;
+		}
+
+		return pixel;
 
 	}
 
-	// http://www.brucelindbloom.com/index.html?Eqn_XYZ_to_xyY.html
-	private double[] XYZ2xy(double[] XYZ) { return new double[] { XYZ[0]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1] }; }
-
-	/*
-	 * McCamy's cubic approximation (http://en.wikipedia.org/wiki/Color_temperature#Approximation)
-	 *
-	 * CCT(x, y) = -449*n^3 + 3525*n^2 - 6823,3*n + 5520,33
-	 *
-	 * Where
-	 *
-	 * n = (x - 0,3320)/(y - 0,1858)
-	 *
-	 * The maximum absolute error for color temperatures ranging from 2856 K (illuminant A) to 6504 K (D65) is under 2 K.
-	 */
-	private double cct(double[] chromaticityCoordinates) {
-		double n = (chromaticityCoordinates[0] - 0.3320D)/(chromaticityCoordinates[1] - 0.1858D);
-		return -449D*java.lang.Math.pow(n, 3D) + 3525D*java.lang.Math.pow(n, 2D) - 6823.3D*n + 5520.33D;
-	}
-
-	/*
-	 * See Digital Negative Specification Version 1.4.0.0, Chapter 6: "Mapping Camera Color Space to CIE XYZ Space"
-	 *
-	 * CameraToXYZ_D50 = FM * D * Inverse(AB * CC)
-	 *
-	 * 1. FM: 3-by-n matrix interpolated from the ForwardMatrix1 and ForwardMatrix2 tags.
-	 *
-	 * 2. D can be computed by finding the neutral for the reference camera:
-	 *
-	 * D = Invert(AsDiagonalMatrix(ReferenceNeutral))
-	 *
-	 * ReferenceNeutral = Inverse(AB * CC) * CameraNeutral
-	 *
-	 * CameraNeutral = AsShotNeutral
-	 *
-	 * 3. AB: n-by-n matrix, which is zero except for the diagonal entries, which are defined by the AnalogBalance tag.
-	 *
-	 * For linear DNG files AnalogBalance = [ 1 1 1 ] and hence AB is the identity matrix.
-	 *
-	 * 4. CC: n-by-n matrix interpolated from the CameraCalibration1 and CameraCalibration2 tags
-	 *
-	 * If CameraCalibration1 = CameraCalibration2 we can use either and there is no need to interpolate.
-	 */
+	// See Digital Negative Specification Version 1.4.0.0, Chapter 6: "Mapping Camera Color Space to CIE XYZ Space"
 	private double[][] cameraToXYZ_D50(double weight, double[] cameraNeutral) {
 		double[][] inverseCC = Math.inverse(Math.vector2Matrix(SRATIONAL.asDoubleArray((SRATIONAL[]) data.get(Tag.CameraCalibration1))));
 		return
@@ -265,36 +198,19 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 						Math.vector2Matrix(SRATIONAL.asDoubleArray((SRATIONAL[]) data.get(Tag.ForwardMatrix2))),
 						weight
 					),
-					Math.inverse(Math.asDiagonalMatrix(com.github.gasrios.raw.lang.Math.multiply(inverseCC, cameraNeutral)))
+					Math.inverse(Math.asDiagonalMatrix(Math.multiply(inverseCC, cameraNeutral)))
 				),
 				inverseCC
 			);
 	}
 
-	private double[] demosaice(double[][][] image, int w, int l) {
-		return image[w][l];
-	}
+	// http://www.brucelindbloom.com/index.html?Eqn_XYZ_to_xyY.html
+	private double[] XYZ2xy(double[] XYZ) { return new double[] { XYZ[0]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1] }; }
 
-	private double[] readPixel(short[] strip, int offset, int samplesPerPixel, int[] bitsPerSample, ByteOrder byteOrder) {
-		double[] pixel = new double[samplesPerPixel];
-		for (int i = 0; i < samplesPerPixel; i++) {
-			// TODO Assuming pixel data is unsigned.
-			if (bitsPerSample[i] <= 8) {
-				short[] sample = new short[1];
-				System.arraycopy(strip, offset, sample, 0, 1);
-				pixel[i] = sample[0]/255D;
-			} else if (bitsPerSample[i] <= 16) {
-				short[] sample = new short[2];
-				System.arraycopy(strip, offset, sample, 0, 2);
-				pixel[i] = TiffInputStream.toInt(sample, byteOrder)/65535D;
-			} else if (bitsPerSample[i] <= 32) {
-				short[] sample = new short[4];
-				System.arraycopy(strip, offset, sample, 0, 4);
-				pixel[i] = TiffInputStream.toLong(sample, byteOrder)/4294967295D;
-			}
-			offset += 1 + (bitsPerSample[i]-1)/8;
-		}
-		return pixel;
+	// McCamy's cubic approximation (http://en.wikipedia.org/wiki/Color_temperature#Approximation)
+	private double cct(double[] chromaticityCoordinates) {
+		double n = (chromaticityCoordinates[0] - 0.3320D)/(chromaticityCoordinates[1] - 0.1858D);
+		return -449D*java.lang.Math.pow(n, 3D) + 3525D*java.lang.Math.pow(n, 2D) - 6823.3D*n + 5520.33D;
 	}
 
 	public static void main(String[] args) throws Exception {
