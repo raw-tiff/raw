@@ -111,6 +111,8 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 		data.put(Tag.BitsPerSample,		bitsPerSample);
 		data.put(ByteOrder.class,		ifd.getByteOrder());
 
+		double minValue = Double.MAX_VALUE, maxValue = Double.MIN_VALUE;
+
 		// See TIFF 6.0 Specification, page 39
 		// TODO can be SHORT or LONG
 		int rowsPerStrip = (int) (long) ifd.get(Tag.RowsPerStrip);
@@ -125,11 +127,17 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 				if (w < 0 || w > activeWMax || l < 0 || l > activeLMax) continue;
 				// See TIFF/EP, page 26
 				// TODO Is the mask being correctly applied?
+				double value = readPixel(strip, j*pixelSize)[0];
+				minValue = minValue > value? value : minValue;
+				maxValue = maxValue < value? value : maxValue;
 				image[w][l][planeColor[pattern[(w + activeWMin)%repeatPatternDim[0]*2 + (l + activeLMin)%repeatPatternDim[1]]]] =
 					// TODO assuming SamplesPerPixel = 1
-					readPixel(strip, j*pixelSize)[0];
+					value;
 			}
 		}
+
+		System.out.println("minValue: " + minValue);
+		System.out.println("maxValue: " + maxValue);
 
 		for (int w = 0; w < image.length; w++) for (int l = 0; l < image[w].length; l++) {
 
@@ -153,40 +161,51 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 			 * The first step is to process the raw values through the look-up table specified by the LinearizationTable tag, if
 			 * any. If the raw value is greater than the size of the table, it is mapped to the last entry of the table.
 			 *
-			 * TODO No LinearizationTable
+			 * TODO ignoring LinearizationTable
 			 */
 			
-			/*
-			 * • Black Subtraction
-			 *
-			 * The black level for each pixel is then computed and subtracted. The black level for each pixel is the sum of the
-			 * black levels specified by the BlackLevel, BlackLevelDeltaH and BlackLevelDeltaV tags.
-			 *
-			 * BlackLevel = com.github.gasrios.raw.lang.RATIONAL[4] { 524288/256, 524288/256, 524288/256, 524288/256 }
-			 *
-			 * This tag specifies the zero light (a.k.a. thermal black or black current) encoding level, as a repeating pattern.
-			 * The origin of this pattern is the top-left corner of the ActiveArea rectangle. The values are stored in
-			 * row-column-sample scan order.
-			 *
-			 * BlackLevelRepeatDim = java.lang.Integer[2] { 2, 2 }
-			 * No BlackLevelDeltaH, no BlackLevelDeltaV
-			 */
 
-			for (int i = 0; i < pixel.length; i++) {
-				//if (pixel[i] > 0) pixel[i] -= blackLevel[blackLevelRepeatDim[]];
+			for (int i = 0; i < pixel.length; i++) if (pixel[i] > 0) {
+
+				/*
+				 * • Black Subtraction
+				 *
+				 * The black level for each pixel is then computed and subtracted. The black level for each pixel is the sum of the
+				 * black levels specified by the BlackLevel, BlackLevelDeltaH and BlackLevelDeltaV tags.
+				 *
+				 * TODO ignoring BlackLevelDeltaH and BlackLevelDeltaV
+				 * TODO ignoring BlackLevelDeltaH and BlackLevelDeltaV
+				 *
+				 * BlackLevel = com.github.gasrios.raw.lang.RATIONAL[4] { 524288/256, 524288/256, 524288/256, 524288/256 }
+				 *
+				 * This tag specifies the zero light (a.k.a. thermal black or black current) encoding level, as a repeating pattern.
+				 * The origin of this pattern is the top-left corner of the ActiveArea rectangle. The values are stored in
+				 * row-column-sample scan order.
+				 *
+				 * BlackLevelRepeatDim = java.lang.Integer[2] { 2, 2 }
+				 *
+				 * This tag specifies repeat pattern size for the BlackLevel tag.
+				 */
+
+				pixel[i] -= blackLevel[w%blackLevelRepeatDim[0]*2 + l%blackLevelRepeatDim[1]].doubleValue();
+
+				/*
+				 * • Rescaling
+				 *
+				 * The black subtracted values are then rescaled to map them to a logical 0.0 to 1.0 range. The scale factor is the
+				 * inverse of the difference between the value specified in the WhiteLevel tag and the maximum computed black level
+				 * for the sample plane.
+				 *
+				 * WhiteLevel = 15000 (java.lang.Integer)
+				 *
+				 * 1/whiteLevel-blackLevel[0][0]
+				 */
+
+				pixel[i] /= (whiteLevel-blackLevel[0].doubleValue());
+
 			}
 
 			/*
-			 * • Rescaling
-			 *
-			 * The black subtracted values are then rescaled to map them to a logical 0.0 to 1.0 range. The scale factor is the
-			 * inverse of the difference between the value specified in the WhiteLevel tag and the maximum computed black level
-			 * for the sample plane.
-			 */
-
-			/*
-			 * WhiteLevel = 15000 (java.lang.Integer)
-			 *
 			 * • Clipping
 			 *
 			 * The rescaled values are then clipped to a 0.0 to 1.0 logical range.
@@ -238,15 +257,18 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 			if (bitsPerSample[i] <= 8) {
 				short[] sample = new short[1];
 				System.arraycopy(strip, offset, sample, 0, 1);
-				pixel[i] = sample[0]/(double) 0xFF;
+				//pixel[i] = sample[0]/(double) 0xFF;
+				pixel[i] = sample[0];
 			} else if (bitsPerSample[i] <= 16) {
 				short[] sample = new short[2];
 				System.arraycopy(strip, offset, sample, 0, 2);
-				pixel[i] = TiffInputStream.toInt(sample, byteOrder)/(double) 0xFFFF;
+				//pixel[i] = TiffInputStream.toInt(sample, byteOrder)/(double) 0xFFFF;
+				pixel[i] = TiffInputStream.toInt(sample, byteOrder);
 			} else if (bitsPerSample[i] <= 32) {
 				short[] sample = new short[4];
 				System.arraycopy(strip, offset, sample, 0, 4);
-				pixel[i] = TiffInputStream.toLong(sample, byteOrder)/(double) 0xFFFFFFFF;
+				//pixel[i] = TiffInputStream.toLong(sample, byteOrder)/(double) 0xFFFFFFFF;
+				pixel[i] = TiffInputStream.toLong(sample, byteOrder);
 			}
 			offset += 1 + (bitsPerSample[i]-1)/8;
 		}
