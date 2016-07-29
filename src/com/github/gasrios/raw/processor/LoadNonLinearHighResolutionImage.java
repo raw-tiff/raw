@@ -76,14 +76,14 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 		 */
 
 		// Image size
-		int		width					= (int) (long)		ifd.get(Tag.ImageWidth);
-		int		length					= (int) (long)		ifd.get(Tag.ImageLength);
+		int			width				= (int) (long)		ifd.get(Tag.ImageWidth);
+		int			length				= (int) (long)		ifd.get(Tag.ImageLength);
 
 		// Active sensor pixels (All others should be ignored)
-		int		activeWMin				= (int) ((long[])	ifd.get(Tag.ActiveArea))[1];
-		int		activeLMin				= (int) ((long[])	ifd.get(Tag.ActiveArea))[0];
-		int		activeWMax				= (int) ((long[])	ifd.get(Tag.ActiveArea))[3] - activeWMin;
-		int		activeLMax				= (int) ((long[])	ifd.get(Tag.ActiveArea))[2] - activeLMin;
+		int			activeWMin			= (int) ((long[])	ifd.get(Tag.ActiveArea))[1];
+		int			activeLMin			= (int) ((long[])	ifd.get(Tag.ActiveArea))[0];
+		int			activeWMax			= (int) ((long[])	ifd.get(Tag.ActiveArea))[3] - activeWMin;
+		int			activeLMax			= (int) ((long[])	ifd.get(Tag.ActiveArea))[2] - activeLMin;
 
 		// Valid cropping interval
 		int			cropWMin			= ((RATIONAL[])		ifd.get(Tag.DefaultCropOrigin))[0].intValue();
@@ -91,20 +91,25 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 		int			cropWMax			= ((RATIONAL[])		ifd.get(Tag.DefaultCropSize))[0].intValue();
 		int			cropLMax			= ((RATIONAL[])		ifd.get(Tag.DefaultCropSize))[1].intValue();
 
-		// CFA pattern description
-		short[]	planeColor				= (short[])			ifd.get(Tag.CFAPlaneColor);
-		short[]	pattern					= (short[])			ifd.get(Tag.CFAPattern);
-		int[]	repeatPatternDim		= (int[])			ifd.get(Tag.CFARepeatPatternDim);
-
 		// Pixel description
-		int		samplesPerPixel			= (int)				ifd.get(Tag.SamplesPerPixel);
-		int[]	bitsPerSample			= (int[])			ifd.get(Tag.BitsPerSample);
-		int		pixelSize				= 0;
+		int			samplesPerPixel		= (int)				ifd.get(Tag.SamplesPerPixel);
+		int[]		bitsPerSample		= (int[])			ifd.get(Tag.BitsPerSample);
+		int			pixelSize			= 0;
 		for (int i = 0; i < samplesPerPixel; i++) pixelSize += 1 + (bitsPerSample [i] - 1)/8;
 
-		data.put(Tag.SamplesPerPixel, samplesPerPixel);
-		data.put(Tag.BitsPerSample, bitsPerSample);
-		data.put(ByteOrder.class, ifd.getByteOrder());
+		// CFA pattern description
+		short[]		planeColor			= (short[])			ifd.get(Tag.CFAPlaneColor);
+		short[]		pattern				= (short[])			ifd.get(Tag.CFAPattern);
+		int[]		repeatPatternDim	= (int[])			ifd.get(Tag.CFARepeatPatternDim);
+
+		// Black & white levels for linearization
+		RATIONAL[]	blackLevel			= (RATIONAL[])		ifd.get(Tag.BlackLevel);
+		int[]		blackLevelRepeatDim	= (int[])			ifd.get(Tag.BlackLevelRepeatDim);
+		int			whiteLevel			= (int)				ifd.get(Tag.WhiteLevel);
+
+		data.put(Tag.SamplesPerPixel,	samplesPerPixel);
+		data.put(Tag.BitsPerSample,		bitsPerSample);
+		data.put(ByteOrder.class,		ifd.getByteOrder());
 
 		// See TIFF 6.0 Specification, page 39
 		// TODO can be SHORT or LONG
@@ -126,7 +131,70 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 			}
 		}
 
-		// See See Digital Negative Specification Version 1.4.0.0, page 79
+		for (int w = 0; w < image.length; w++) for (int l = 0; l < image[w].length; l++) {
+
+			double[] pixel = image[w][l];
+
+			/*
+			 * See Digital Negative Specification Version 1.4.0.0, page 77
+			 *
+			 * Mapping Raw Values to Linear Reference Values
+			 *
+			 * The section describes DNG's processing model for mapping stored raw sensor values into linear reference values.
+			 *
+			 * Linear reference values encode zero light as 0.0, and the maximum useful value (limited by either sensor saturation
+			 * or analog to digital converter clipping) as 1.0. If SamplesPerPixel is greater than one, each sample plane should
+			 * be processed independently.
+			 *
+			 * The processing model follows these steps:
+			 *
+			 * • Linearization
+			 *
+			 * The first step is to process the raw values through the look-up table specified by the LinearizationTable tag, if
+			 * any. If the raw value is greater than the size of the table, it is mapped to the last entry of the table.
+			 *
+			 * TODO No LinearizationTable
+			 */
+			
+			/*
+			 * • Black Subtraction
+			 *
+			 * The black level for each pixel is then computed and subtracted. The black level for each pixel is the sum of the
+			 * black levels specified by the BlackLevel, BlackLevelDeltaH and BlackLevelDeltaV tags.
+			 *
+			 * BlackLevel = com.github.gasrios.raw.lang.RATIONAL[4] { 524288/256, 524288/256, 524288/256, 524288/256 }
+			 *
+			 * This tag specifies the zero light (a.k.a. thermal black or black current) encoding level, as a repeating pattern.
+			 * The origin of this pattern is the top-left corner of the ActiveArea rectangle. The values are stored in
+			 * row-column-sample scan order.
+			 *
+			 * BlackLevelRepeatDim = java.lang.Integer[2] { 2, 2 }
+			 * No BlackLevelDeltaH, no BlackLevelDeltaV
+			 */
+
+			for (int i = 0; i < pixel.length; i++) {
+				//if (pixel[i] > 0) pixel[i] -= blackLevel[blackLevelRepeatDim[]];
+			}
+
+			/*
+			 * • Rescaling
+			 *
+			 * The black subtracted values are then rescaled to map them to a logical 0.0 to 1.0 range. The scale factor is the
+			 * inverse of the difference between the value specified in the WhiteLevel tag and the maximum computed black level
+			 * for the sample plane.
+			 */
+
+			/*
+			 * WhiteLevel = 15000 (java.lang.Integer)
+			 *
+			 * • Clipping
+			 *
+			 * The rescaled values are then clipped to a 0.0 to 1.0 logical range.
+			 */
+
+		}
+
+		// See Digital Negative Specification Version 1.4.0.0, page 79
 		double[] cameraNeutral = RATIONAL.asDoubleArray((RATIONAL[]) data.get(Tag.AsShotNeutral));
 
 		/*
