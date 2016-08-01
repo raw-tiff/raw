@@ -38,10 +38,20 @@ import com.github.gasrios.raw.swing.ImageSRGB;
 
 public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 
+	/*
+	 * See Digital Negative Specification Version 1.4.0.0, Chapter 5: “Mapping Raw Values to Linear Reference Values”.
+	 *
+	 * Image black and white levels are defined by tags BlackLevel, BlackLevelDeltaH, BlackLevelDeltaV and WhiteLevel. Values
+	 * outside the interval defined by them should be clipped.
+	 *
+	 * Set this constant to false to enforce this behavior, or true to preserve sensor values.
+	 */
+	private static final boolean PRESERVE_SENSOR_LEVELS = true;
+
 	private static final Map<Integer, Illuminant> ILLUMINANTS = new HashMap<Integer, Illuminant>();
 	static { for (Illuminant illuminant: Illuminant.values()) ILLUMINANTS.put(illuminant.value, illuminant); }
 
-	protected Map<Object, Object> data;
+	private Map<Object, Object> data;
 
 	protected double[][][] image;
 
@@ -91,7 +101,7 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 		int			cropWMax			= ((RATIONAL[])		ifd.get(Tag.DefaultCropSize))[0].intValue();
 		int			cropLMax			= ((RATIONAL[])		ifd.get(Tag.DefaultCropSize))[1].intValue();
 
-		// Pixel description
+		// Pixel information
 		int			samplesPerPixel		= (int)				ifd.get(Tag.SamplesPerPixel);
 		int[]		bitsPerSample		= (int[])			ifd.get(Tag.BitsPerSample);
 		int			pixelSize			= 0;
@@ -105,7 +115,10 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 		// Black & white levels
 		RATIONAL[]	blackLevel			= (RATIONAL[])		ifd.get(Tag.BlackLevel);
 		int[]		blackLevelRepeatDim	= (int[])			ifd.get(Tag.BlackLevelRepeatDim);
-		int			whiteLevel			= (int)				ifd.get(Tag.WhiteLevel);
+		long		whiteLevel			= (int)				ifd.get(Tag.WhiteLevel);
+
+		// TODO can be SHORT or LONG
+		int			rowsPerStrip		= (int) (long)		ifd.get(Tag.RowsPerStrip);
 
 		data.put(Tag.SamplesPerPixel,	samplesPerPixel);
 		data.put(Tag.BitsPerSample,		bitsPerSample);
@@ -119,48 +132,86 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 			maxValue[i] = Double.MIN_VALUE;
 		}
 
+		double[][][] activeImage = new double[activeWMax][activeLMax][3];
+
 		// See TIFF 6.0 Specification, page 39
-		// TODO can be SHORT or LONG
-		int rowsPerStrip = (int) (long) ifd.get(Tag.RowsPerStrip);
-		double[][][] image = new double[activeWMax][activeLMax][3];
 		for (int i = 0; i < (length + rowsPerStrip - 1) / rowsPerStrip; i++) {
+
 			short[] strip = ifd.getStripAsShortArray(i);
+
 			for (int j = 0; j*pixelSize < strip.length; j = j + 1) {
 
 				int w = j%width - activeWMin;
 				int l = j/width + i*rowsPerStrip - activeLMin;
 
 				if (w < 0 || w > activeWMax || l < 0 || l > activeLMax) continue;
+
 				// See TIFF/EP, page 26
+				// TODO Adding one makes final image look better, what is wrong?
+				short dim = (short) ((1 + planeColor[pattern[(w + activeWMin)%repeatPatternDim[0]*2 + (l + activeLMin)%repeatPatternDim[1]]])%3);
+
+				// See Digital Negative Specification Version 1.4.0.0, page 27: "The origin of this pattern is the top-left corner of the ActiveArea rectangle"
+				int blackDim = w%blackLevelRepeatDim[0]*2 + l%blackLevelRepeatDim[1];
+
 				// TODO assuming SamplesPerPixel = 1
-				double value = readPixel(strip, j*pixelSize)[0];
-				short dim = planeColor[pattern[(w + activeWMin)%repeatPatternDim[0]*2 + (l + activeLMin)%repeatPatternDim[1]]];
+				long value = readPixel(strip, j*pixelSize)[0];
+
 				minValue[dim] = minValue[dim] > value? value : minValue[dim];
 				maxValue[dim] = maxValue[dim] < value? value : maxValue[dim];
-				// TODO Is the mask being correctly applied?
-				image[w][l][dim] =
-					value;
-			} 
+
+				if (PRESERVE_SENSOR_LEVELS) {
+					blackLevel[blackDim] = blackLevel[blackDim].longValue() > value? new RATIONAL(value, 1) : blackLevel[blackDim];
+					whiteLevel = whiteLevel < value? value : whiteLevel;
+				}
+
+				activeImage[w][l][dim] = value;
+
+			}
+
 		}
+
+		System.out.println("CFA Pattern");
+		for (int i = 0; i < repeatPatternDim[0]; i++)  {
+			System.out.print("\t");
+			for (int j = 0; j < repeatPatternDim[1]; j++)
+				System.out.print(planeColor[pattern[(i + activeWMin)%repeatPatternDim[0]*2 + (j + activeLMin)%repeatPatternDim[1]]]);
+			System.out.println();
+		}
+		System.out.println();
+
+		System.out.println("Black levels");
+		for (int i = 0; i < blackLevelRepeatDim[0]; i++)  {
+			System.out.print("\t");
+			for (int j = 0; j < blackLevelRepeatDim[1]; j++)
+				System.out.print(blackLevel[i%blackLevelRepeatDim[0]*2 + j%blackLevelRepeatDim[1]].doubleValue() + "\t");
+			System.out.println();
+		}
+		System.out.println();
+
+		System.out.println("White level: " + whiteLevel);
+		System.out.println();
 
 		for (int i = 0; i < 3; i++) {
 			System.out.println("minValue[" + i + "]: " + minValue[i]);
 			System.out.println("maxValue[" + i + "]: " + maxValue[i]);
+			System.out.println();
 		}
 
-		for (int i = 0; i < 3; i++) {
-			System.out.print(image[0][0][i]);
-			System.out.print("\t");
-			System.out.print(image[1][0][i]);
-			System.out.print("\t");
-			System.out.print(image[0][1][i]);
-			System.out.print("\t");
-			System.out.println(image[1][1][i]);
+		for (int w = cropWMin; w < 2 + cropWMin; w++) {
+			for (int l =  cropLMin; l < 2 + cropLMin; l++) {
+				System.out.print("[ ");
+				for (int i = 0; i < 3; i++) {
+					System.out.print(activeImage[w][l][i]);
+					System.out.print(" ");
+				}
+				System.out.print("] ");
+			}
+			System.out.println();
 		}
 
-		for (int w = 0; w < image.length; w++) for (int l = 0; l < image[w].length; l++) {
+		for (int w = 0; w < activeImage.length; w++) for (int l = 0; l < activeImage[w].length; l++) {
 
-			double[] pixel = image[w][l];
+			double[] pixel = activeImage[w][l];
 
 			/*
 			 * See Digital Negative Specification Version 1.4.0.0, page 77
@@ -186,6 +237,8 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 
 			for (int i = 0; i < pixel.length; i++) if (pixel[i] > 0) {
 
+				double black = blackLevel[w%blackLevelRepeatDim[0]*2 + l%blackLevelRepeatDim[1]].doubleValue();
+
 				/*
 				 * • Black Subtraction
 				 *
@@ -194,19 +247,9 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 				 *
 				 * TODO ignoring BlackLevelDeltaH and BlackLevelDeltaV
 				 * TODO ignoring BlackLevelDeltaH and BlackLevelDeltaV
-				 *
-				 * BlackLevel = com.github.gasrios.raw.lang.RATIONAL[4] { 524288/256, 524288/256, 524288/256, 524288/256 }
-				 *
-				 * This tag specifies the zero light (a.k.a. thermal black or black current) encoding level, as a repeating pattern.
-				 * The origin of this pattern is the top-left corner of the ActiveArea rectangle. The values are stored in
-				 * row-column-sample scan order.
-				 *
-				 * BlackLevelRepeatDim = java.lang.Integer[2] { 2, 2 }
-				 *
-				 * This tag specifies repeat pattern size for the BlackLevel tag.
 				 */
 
-				pixel[i] -= blackLevel[w%blackLevelRepeatDim[0]*2 + l%blackLevelRepeatDim[1]].doubleValue();
+				pixel[i] -= black;
 
 				/*
 				 * • Rescaling
@@ -214,11 +257,9 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 				 * The black subtracted values are then rescaled to map them to a logical 0.0 to 1.0 range. The scale factor is the
 				 * inverse of the difference between the value specified in the WhiteLevel tag and the maximum computed black level
 				 * for the sample plane.
-				 *
-				 * WhiteLevel = 15000 (java.lang.Integer)
 				 */
 
-				pixel[i] /= (whiteLevel-blackLevel[0].doubleValue());
+				pixel[i] /= (whiteLevel-black);
 
 			}
 
@@ -228,6 +269,20 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 			 * The rescaled values are then clipped to a 0.0 to 1.0 logical range.
 			 */
 
+		}
+
+		System.out.println("After linearization");
+
+		for (int w = cropWMin; w < 2 + cropWMin; w++) {
+			for (int l =  cropLMin; l < 2 + cropLMin; l++) {
+				System.out.print("[ ");
+				for (int i = 0; i < 3; i++) {
+					System.out.print(activeImage[w][l][i]);
+					System.out.print(" ");
+				}
+				System.out.print("] ");
+			}
+			System.out.println();
 		}
 
 		// See Digital Negative Specification Version 1.4.0.0, page 79
@@ -249,9 +304,24 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 			cameraNeutral
 		);
 
-		this.image = new double[cropWMax][cropLMax][];
+		image = new double[cropWMax][cropLMax][];
 		for (int w = 0; w < cropWMax; w++) for (int l = 0; l < cropLMax; l++)
-			this.image[w][l] = Math.multiply(cameraToXYZ_D50, demosaice(image, w + cropWMin, l + cropLMin));
+			this.image[w][l] = Math.multiply(cameraToXYZ_D50, demosaice(activeImage, w + cropWMin, l + cropLMin));
+			//image[w][l] = demosaice(activeImage, w + cropWMin, l + cropLMin);
+
+		System.out.println("After demosaicing");
+
+		for (int w = 0; w < 2; w++) {
+			for (int l = 0; l < 2; l++) {
+				System.out.print("[ ");
+				for (int i = 0; i < 3; i++) {
+					System.out.print(image[w][l][i]);
+					System.out.print(" ");
+				}
+				System.out.print("] ");
+			}
+			System.out.println();
+		}
 
 		new ImageFrame(new ImageSRGB(this.image), 1075, 716);
 		//new ImageFrame(new ImageSRGB(this.image), width, length);
@@ -260,32 +330,41 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 
 	// TODO implement demosaicing algorithm
 	private double[] demosaice(double[][][] image, int w, int l) {
-		return image[w][l];
+
+		double[] pixel = new double[] { image[w][l][0], image[w][l][1], image[w][l][2] };
+
+		for (int c = 0; c < 3; c++) if (pixel[c] == 0) for (int i = w-1; i <= w+1; i++) for (int j = l-1; j <= l+1; j++) {
+			double buffer = 0;
+			double div = 0;
+			if (image[i][j][c] != 0) {
+				buffer += image[i][j][c];
+				div++;
+			}
+			if (div > 0) pixel[c] = buffer/div;
+		}
+		return pixel;
 	}
 
-	private double[] readPixel(short[] strip, int offset) {
+	private long[] readPixel(short[] strip, int offset) {
 
 		int samplesPerPixel	= (int) data.get(Tag.SamplesPerPixel);
 		int[] bitsPerSample	= (int[]) data.get(Tag.BitsPerSample);
 		ByteOrder byteOrder	= (ByteOrder) data.get(ByteOrder.class);
-		double[] pixel		= new double[samplesPerPixel];
+		long[] pixel		= new long[samplesPerPixel];
 
 		for (int i = 0; i < samplesPerPixel; i++) {
 			// TODO Assuming pixel data is unsigned.
 			if (bitsPerSample[i] <= 8) {
 				short[] sample = new short[1];
 				System.arraycopy(strip, offset, sample, 0, 1);
-				//pixel[i] = sample[0]/(double) 0xFF;
 				pixel[i] = sample[0];
 			} else if (bitsPerSample[i] <= 16) {
 				short[] sample = new short[2];
 				System.arraycopy(strip, offset, sample, 0, 2);
-				//pixel[i] = TiffInputStream.toInt(sample, byteOrder)/(double) 0xFFFF;
 				pixel[i] = TiffInputStream.toInt(sample, byteOrder);
 			} else if (bitsPerSample[i] <= 32) {
 				short[] sample = new short[4];
 				System.arraycopy(strip, offset, sample, 0, 4);
-				//pixel[i] = TiffInputStream.toLong(sample, byteOrder)/(double) 0xFFFFFFFF;
 				pixel[i] = TiffInputStream.toLong(sample, byteOrder);
 			}
 			offset += 1 + (bitsPerSample[i]-1)/8;

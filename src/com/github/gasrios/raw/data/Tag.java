@@ -264,8 +264,19 @@ public class Tag implements Comparable<Tag> {
 	public static final Tag	CFALayout = new Tag("CFALayout", 50711);
 
 	public static final Tag	LinearizationTable = new Tag("LinearizationTable", 50712);
+
+	/*
+	 * DNG, page 26
+	 * See chapter 5, “Mapping Raw Values to Linear Reference Values” on page 77 for details of the processing model.
+	 */
 	public static final Tag	BlackLevelRepeatDim = new Tag("BlackLevelRepeatDim", 50713);
+
+	/*
+	 * DNG, page 27
+	 * See chapter 5, “Mapping Raw Values to Linear Reference Values” on page 77 for details of the processing model.
+	 */
 	public static final Tag	BlackLevel = new Tag("BlackLevel", 50714);
+
 	public static final Tag	BlackLevelDeltaH = new Tag("BlackLevelDeltaH", 50715);
 	public static final Tag	BlackLevelDeltaV = new Tag("BlackLevelDeltaV", 50716);
 
