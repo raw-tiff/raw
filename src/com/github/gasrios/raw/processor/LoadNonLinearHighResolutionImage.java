@@ -102,7 +102,7 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 		short[]		pattern				= (short[])			ifd.get(Tag.CFAPattern);
 		int[]		repeatPatternDim	= (int[])			ifd.get(Tag.CFARepeatPatternDim);
 
-		// Black & white levels for linearization
+		// Black & white levels
 		RATIONAL[]	blackLevel			= (RATIONAL[])		ifd.get(Tag.BlackLevel);
 		int[]		blackLevelRepeatDim	= (int[])			ifd.get(Tag.BlackLevelRepeatDim);
 		int			whiteLevel			= (int)				ifd.get(Tag.WhiteLevel);
@@ -111,7 +111,13 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 		data.put(Tag.BitsPerSample,		bitsPerSample);
 		data.put(ByteOrder.class,		ifd.getByteOrder());
 
-		double minValue = Double.MAX_VALUE, maxValue = Double.MIN_VALUE;
+		double[] minValue = new double[3];
+		double[] maxValue = new double[3];
+
+		for (int i = 0; i < 3; i++) {
+			minValue[i] = Double.MAX_VALUE;
+			maxValue[i] = Double.MIN_VALUE;
+		}
 
 		// See TIFF 6.0 Specification, page 39
 		// TODO can be SHORT or LONG
@@ -126,18 +132,31 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 
 				if (w < 0 || w > activeWMax || l < 0 || l > activeLMax) continue;
 				// See TIFF/EP, page 26
-				// TODO Is the mask being correctly applied?
+				// TODO assuming SamplesPerPixel = 1
 				double value = readPixel(strip, j*pixelSize)[0];
-				minValue = minValue > value? value : minValue;
-				maxValue = maxValue < value? value : maxValue;
-				image[w][l][planeColor[pattern[(w + activeWMin)%repeatPatternDim[0]*2 + (l + activeLMin)%repeatPatternDim[1]]]] =
-					// TODO assuming SamplesPerPixel = 1
+				short dim = planeColor[pattern[(w + activeWMin)%repeatPatternDim[0]*2 + (l + activeLMin)%repeatPatternDim[1]]];
+				minValue[dim] = minValue[dim] > value? value : minValue[dim];
+				maxValue[dim] = maxValue[dim] < value? value : maxValue[dim];
+				// TODO Is the mask being correctly applied?
+				image[w][l][dim] =
 					value;
-			}
+			} 
 		}
 
-		System.out.println("minValue: " + minValue);
-		System.out.println("maxValue: " + maxValue);
+		for (int i = 0; i < 3; i++) {
+			System.out.println("minValue[" + i + "]: " + minValue[i]);
+			System.out.println("maxValue[" + i + "]: " + maxValue[i]);
+		}
+
+		for (int i = 0; i < 3; i++) {
+			System.out.print(image[0][0][i]);
+			System.out.print("\t");
+			System.out.print(image[1][0][i]);
+			System.out.print("\t");
+			System.out.print(image[0][1][i]);
+			System.out.print("\t");
+			System.out.println(image[1][1][i]);
+		}
 
 		for (int w = 0; w < image.length; w++) for (int l = 0; l < image[w].length; l++) {
 
@@ -197,8 +216,6 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 				 * for the sample plane.
 				 *
 				 * WhiteLevel = 15000 (java.lang.Integer)
-				 *
-				 * 1/whiteLevel-blackLevel[0][0]
 				 */
 
 				pixel[i] /= (whiteLevel-blackLevel[0].doubleValue());
@@ -237,6 +254,7 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 			this.image[w][l] = Math.multiply(cameraToXYZ_D50, demosaice(image, w + cropWMin, l + cropLMin));
 
 		new ImageFrame(new ImageSRGB(this.image), 1075, 716);
+		//new ImageFrame(new ImageSRGB(this.image), width, length);
 
 	}
 
