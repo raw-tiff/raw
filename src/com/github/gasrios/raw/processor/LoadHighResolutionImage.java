@@ -32,6 +32,7 @@
 
 package com.github.gasrios.raw.processor;
 
+import java.io.FileInputStream;
 import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,10 +40,12 @@ import java.util.Map;
 import com.github.gasrios.raw.data.Illuminant;
 import com.github.gasrios.raw.data.ImageFileDirectory;
 import com.github.gasrios.raw.data.Tag;
-import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.lang.RATIONAL;
 import com.github.gasrios.raw.lang.SRATIONAL;
+import com.github.gasrios.raw.lang.TiffProcessorException;
+import com.github.gasrios.raw.swing.ImageFrame;
+import com.github.gasrios.raw.swing.ImageSRGB;
 
 public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
@@ -69,32 +72,14 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 		data.put(Tag.BitsPerSample,		ifd.get(Tag.BitsPerSample));
 		data.put(Tag.SamplesPerPixel,	ifd.get(Tag.SamplesPerPixel));
 
-		/*
-		 * See See Digital Negative Specification Version 1.4.0.0, page 79
-		 *
-		 * DNG provides for one or two sets of color calibration tags, each set optimized for a different illuminant. If both
-		 * sets of color calibration tags are included, then the raw converter should interpolate between the calibrations based
-		 * on the white balance selected by the user.
-		 *
-		 * If two calibrations are included, then it is recommended that one of the calibrations be for a low color temperature
-		 * illuminant (e.g., Standard-A) and the second calibration illuminant be for a higher color temperature illuminant
-		 * (e.g., D55 or D65). This combination has been found to work well for a wide range of real-world digital camera images.
-		 *
-		 * DNG versions earlier than 1.2.0.0 allow the raw converter to choose the interpolation algorithm. DNG 1.2.0.0 and
-		 * later requires a specific interpolation algorithm: linear interpolation using inverse correlated color temperature.
-		 *
-		 * To find the interpolation weighting factor between the two tag sets, find the correlated color temperature for the
-		 * user-selected white balance and the two calibration illuminants. If the white balance temperature is between two
-		 * calibration illuminant temperatures, then invert all the temperatures and use linear interpolation. Otherwise, use
-		 * the closest calibration tag set.
-		 */
+		// See See Digital Negative Specification Version 1.4.0.0, page 79
 		double[] cameraNeutral = RATIONAL.asDoubleArray((RATIONAL[]) data.get(Tag.AsShotNeutral));
 
 		/*
 		 * Calculate the interpolation weighting factor associated with tag AsShotNeutral. Oddly enough, cameraToXYZ_D50 correctly
 		 * maps AsShotNeutral to D50 white point for any interpolation weighting factor. This is very good but rather unexpected.
 		 * A nice collateral effect is we do not need to iterate over weight to find the right value, just once is enough.
-		 * 
+		 *
 		 * For the first step we assume weight = 0.5
 		 *
 		 * Remember we interpolate over the *inverse* of CCT, so bigger becomes smaller and we need to subtract one from the
@@ -153,50 +138,33 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 			XYZ[2] = maxZ*Math.normalize(minZ, XYZ[2], maxZ);
 		}
 
+		for (int w = 0; w < 2; w++) {
+			for (int l =  0; l < 2; l++) {
+				System.out.print("[ ");
+				for (int i = 0; i < 3; i++) {
+					System.out.print(image[w][l][i]);
+					System.out.print(" ");
+				}
+				System.out.print("] ");
+			}
+			System.out.println();
+		}
+
+		new ImageFrame(new ImageSRGB(image), 1075, 716);
+		//new ImageFrame(new ImageSRGB(this.image), width, length);
+
 	}
 
 	// http://www.brucelindbloom.com/index.html?Eqn_XYZ_to_xyY.html
 	private double[] XYZ2xy(double[] XYZ) { return new double[] { XYZ[0]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1] }; }
 
-	/*
-	 * McCamy's cubic approximation (http://en.wikipedia.org/wiki/Color_temperature#Approximation)
-	 *
-	 * CCT(x, y) = -449*n^3 + 3525*n^2 - 6823,3*n + 5520,33
-	 *
-	 * Where
-	 *
-	 * n = (x - 0,3320)/(y - 0,1858)
-	 *
-	 * The maximum absolute error for color temperatures ranging from 2856 K (illuminant A) to 6504 K (D65) is under 2 K.
-	 */
+	// McCamy's cubic approximation (http://en.wikipedia.org/wiki/Color_temperature#Approximation)
 	private double cct(double[] chromaticityCoordinates) {
 		double n = (chromaticityCoordinates[0] - 0.3320D)/(chromaticityCoordinates[1] - 0.1858D);
 		return -449D*java.lang.Math.pow(n, 3D) + 3525D*java.lang.Math.pow(n, 2D) - 6823.3D*n + 5520.33D;
 	}
 
-	/*
-	 * See Digital Negative Specification Version 1.4.0.0, Chapter 6: "Mapping Camera Color Space to CIE XYZ Space"
-	 *
-	 * CameraToXYZ_D50 = FM * D * Inverse(AB * CC)
-	 *
-	 * 1. FM: 3-by-n matrix interpolated from the ForwardMatrix1 and ForwardMatrix2 tags.
-	 *
-	 * 2. D can be computed by finding the neutral for the reference camera:
-	 *
-	 * D = Invert(AsDiagonalMatrix(ReferenceNeutral))
-	 *
-	 * ReferenceNeutral = Inverse(AB * CC) * CameraNeutral
-	 *
-	 * CameraNeutral = AsShotNeutral
-	 *
-	 * 3. AB: n-by-n matrix, which is zero except for the diagonal entries, which are defined by the AnalogBalance tag.
-	 *
-	 * For linear DNG files AnalogBalance = [ 1 1 1 ] and hence AB is the identity matrix.
-	 *
-	 * 4. CC: n-by-n matrix interpolated from the CameraCalibration1 and CameraCalibration2 tags
-	 *
-	 * If CameraCalibration1 = CameraCalibration2 we can use either and there is no need to interpolate.
-	 */
+	// See Digital Negative Specification Version 1.4.0.0, Chapter 6: "Mapping Camera Color Space to CIE XYZ Space"
 	private double[][] cameraToXYZ_D50(double weight, double[] cameraNeutral) {
 		double[][] inverseCC = Math.inverse(Math.vector2Matrix(SRATIONAL.asDoubleArray((SRATIONAL[]) data.get(Tag.CameraCalibration1))));
 		return
@@ -240,6 +208,10 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
 		return pixel;
 
+	}
+
+	public static void main(String[] args) throws Exception {
+		new TiffProcessorEngine(new FileInputStream(args[0]), new LoadHighResolutionImage()).run();
 	}
 
 }

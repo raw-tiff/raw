@@ -46,7 +46,7 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 	 *
 	 * Set this constant to false to enforce this behavior, or true to preserve sensor values.
 	 */
-	private static final boolean PRESERVE_SENSOR_LEVELS = true;
+	private static final boolean PRESERVE_SENSOR_LEVELS = false;
 
 	private static final Map<Integer, Illuminant> ILLUMINANTS = new HashMap<Integer, Illuminant>();
 	static { for (Illuminant illuminant: Illuminant.values()) ILLUMINANTS.put(illuminant.value, illuminant); }
@@ -147,8 +147,7 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 				if (w < 0 || w > activeWMax || l < 0 || l > activeLMax) continue;
 
 				// See TIFF/EP, page 26
-				// TODO Adding one makes final image look better, what is wrong?
-				short dim = (short) ((1 + planeColor[pattern[(w + activeWMin)%repeatPatternDim[0]*2 + (l + activeLMin)%repeatPatternDim[1]]])%3);
+				int dim = planeColor[pattern[(w + activeWMin)%repeatPatternDim[0]*2 + (l + activeLMin)%repeatPatternDim[1]]];
 
 				// See Digital Negative Specification Version 1.4.0.0, page 27: "The origin of this pattern is the top-left corner of the ActiveArea rectangle"
 				int blackDim = w%blackLevelRepeatDim[0]*2 + l%blackLevelRepeatDim[1];
