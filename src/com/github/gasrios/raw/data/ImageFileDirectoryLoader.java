@@ -171,8 +171,8 @@ public final class ImageFileDirectoryLoader {
 		long count = in.readLONG();
 		if (count > 0xFFFFFFFFL) throw new TiffProcessorException("java arrays do not support lengths out of the positive integer range: " + count);
 
-		// It is easier to force BitsPerSample to an array always, so we do not need to treat special cases.
-		if (tag.equals(Tag.BitsPerSample)) {
+		// It is easier to force BitsPerSample and WhiteLevel to arrays, so we do not need to treat special cases.
+		if (tag.equals(Tag.BitsPerSample) || tag.equals(Tag.WhiteLevel)) {
 			if (type.size * count > 4) {
 				long offset = in.readOffset();
 				in.mark();

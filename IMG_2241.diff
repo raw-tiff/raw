@@ -1,0 +1,26 @@
+Linear											|	Nonlinear
+												|
+First											|	First
+StripOffsets = 53712 (Long)						|	StripOffsets = 53844 (Long)
+												|
+High Resolution									|	High Resolution
+PhotometricInterpretation = 34892 (Integer)		|	PhotometricInterpretation = 32803 (Integer)
+ImageWidth = 5202 (Long)						|	ImageWidth = 5344 (Long)
+ImageLength = 3465 (Long)						|	ImageLength = 3516 (Long)
+BitsPerSample = Integer[3] { 16, 16, 16 }		|	BitsPerSample = Integer[1] { 16 }
+StripOffsets = 185040 (Long)					|	StripOffsets = 185172 (Long)
+SamplesPerPixel = 3 (Integer)					|	SamplesPerPixel = 1 (Integer)
+RowsPerStrip = 3465 (Long)						|	RowsPerStrip = 3516 (Long)
+StripByteCounts = 108149580 (Long)				|	StripByteCounts = 37579008 (Long)
+WhiteLevel = Integer[3] { 65535, 65535, 65535 }	|	WhiteLevel = 15000 (Integer)
+												>	BlackLevelRepeatDim = Integer[2] { 2, 2 }
+												>	BlackLevel = RATIONAL[4] { 2048, 2048, 2048, 2048 }
+												>	CFALayout = 1 (Integer)
+												>	CFARepeatPatternDim = Integer[2] { 2, 2 }
+												>	CFAPattern = Short[4] { 0, 1, 1, 2 }
+												>	CFAPlaneColor = Short[3] { 0, 1, 2 }
+												>	BayerGreenSplit = 250 (Long)
+												>	ActiveArea = Long[4] { 51, 142, 3516, 5344 }
+DefaultCropOrigin = RATIONAL[2] { 10, 5 }		|	DefaultCropOrigin = RATIONAL[2] { 10, 5 }
+DefaultCropSize = RATIONAL[2] { 5184, 3456 }	|	DefaultCropSize = RATIONAL[2] { 5184, 3456 }
+

@@ -32,7 +32,6 @@
 
 package com.github.gasrios.raw.processor;
 
-import java.io.FileInputStream;
 import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,8 +43,6 @@ import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.lang.RATIONAL;
 import com.github.gasrios.raw.lang.SRATIONAL;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.swing.ImageFrame;
-import com.github.gasrios.raw.swing.ImageSRGB;
 
 public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
@@ -138,21 +135,6 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 			XYZ[2] = maxZ*Math.normalize(minZ, XYZ[2], maxZ);
 		}
 
-		for (int w = 0; w < 2; w++) {
-			for (int l =  0; l < 2; l++) {
-				System.out.print("[ ");
-				for (int i = 0; i < 3; i++) {
-					System.out.print(image[w][l][i]);
-					System.out.print(" ");
-				}
-				System.out.print("] ");
-			}
-			System.out.println();
-		}
-
-		new ImageFrame(new ImageSRGB(image), 1075, 716);
-		//new ImageFrame(new ImageSRGB(this.image), width, length);
-
 	}
 
 	// http://www.brucelindbloom.com/index.html?Eqn_XYZ_to_xyY.html
@@ -182,6 +164,7 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 	}
 
 	// TODO Assuming in the conversion pixel data is always unsigned. Double check this.
+	// TODO Divide by WhiteLevel, not constant.
 	private double[] readPixel(short[] strip, int offset, ByteOrder byteOrder) {
 
 		int samplesPerPixel = ((int) data.get(Tag.SamplesPerPixel));
@@ -208,10 +191,6 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
 		return pixel;
 
-	}
-
-	public static void main(String[] args) throws Exception {
-		new TiffProcessorEngine(new FileInputStream(args[0]), new LoadHighResolutionImage()).run();
 	}
 
 }

@@ -18,7 +18,7 @@
  * TODO assuming CFALayout = 1
  */
 
-package com.github.gasrios.raw.processor;
+package com.github.gasrios.raw.sandbox;
 
 import java.io.FileInputStream;
 import java.nio.ByteOrder;
@@ -33,10 +33,15 @@ import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.lang.RATIONAL;
 import com.github.gasrios.raw.lang.SRATIONAL;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.swing.ImageFrame;
-import com.github.gasrios.raw.swing.ImageSRGB;
+import com.github.gasrios.raw.processor.AbstractTiffProcessor;
+import com.github.gasrios.raw.processor.TiffProcessorEngine;
 
-public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
+public class CompareLinearAndNonLinearImages extends AbstractTiffProcessor {
+
+	public static void main(String[] args) throws Exception {
+		new TiffProcessorEngine(new FileInputStream(args[0]), new CompareLinearAndNonLinearImages()).run();
+		new TiffProcessorEngine(new FileInputStream(args[1]), new CompareLinearAndNonLinearImages()).run();
+	}
 
 	/*
 	 * See Digital Negative Specification Version 1.4.0.0, Chapter 5: “Mapping Raw Values to Linear Reference Values”.
@@ -53,9 +58,9 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 
 	private Map<Object, Object> data;
 
-	protected double[][][] image;
+	protected long[][][] image;
 
-	public LoadNonLinearHighResolutionImage() { data = new HashMap<Object, Object>(); }
+	public CompareLinearAndNonLinearImages() { data = new HashMap<Object, Object>(); }
 
 	@Override public void firstIfd(ImageFileDirectory ifd) {
 		data.put(Tag.AsShotNeutral,				ifd.get(Tag.AsShotNeutral));
@@ -67,6 +72,148 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 	}
 
 	@Override public void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
+
+		// Image size
+		int			width				= (int) (long)		ifd.get(Tag.ImageWidth);
+		int			length				= (int) (long)		ifd.get(Tag.ImageLength);
+
+		// Pixel information
+		int			samplesPerPixel		= (int)				ifd.get(Tag.SamplesPerPixel);
+		int[]		bitsPerSample		= (int[])			ifd.get(Tag.BitsPerSample);
+		int			pixelSize			= 0;
+		for (int i = 0; i < samplesPerPixel; i++) pixelSize += 1 + (bitsPerSample [i] - 1)/8;
+
+		// TODO can be SHORT or LONG
+		int			rowsPerStrip		= (int) (long)		ifd.get(Tag.RowsPerStrip);
+
+		int[]		whiteLevel			= (int[])				ifd.get(Tag.WhiteLevel);
+
+		data.put(Tag.SamplesPerPixel,	samplesPerPixel);
+		data.put(Tag.BitsPerSample,		bitsPerSample);
+		data.put(ByteOrder.class,		ifd.getByteOrder());
+
+		int photometricInterpretation = (Integer) ifd.get(Tag.PhotometricInterpretation);
+
+		System.out.println("Photometric interpretation: " + photometricInterpretation);
+		System.out.println();
+
+		System.out.print("Size: ");
+		System.out.print(width);
+		System.out.print(", ");
+		System.out.println(length);
+		System.out.println();
+
+		if (photometricInterpretation == 34892) {
+
+			// Linear
+			image = new long[width][length][3];
+
+			// See TIFF 6.0 Specification, page 39
+			for (int i = 0; i < (length + rowsPerStrip - 1) / rowsPerStrip; i++) {
+
+				short[] strip = ifd.getStripAsShortArray(i);
+
+				for (int j = 0; j*pixelSize < strip.length; j = j + 1) {
+
+					int w = j%width;
+					int l = j/width + i*rowsPerStrip;
+
+					// See TIFF/EP, page 26
+					image[w][l] = readPixel(strip, j*pixelSize);
+
+				}
+
+			}
+
+		} else if (photometricInterpretation == 32803) {
+
+			// Nonlinear
+
+			// Active sensor pixels (All others should be ignored)
+			int			activeWMin			= (int) ((long[])	ifd.get(Tag.ActiveArea))[1];
+			int			activeLMin			= (int) ((long[])	ifd.get(Tag.ActiveArea))[0];
+			int			activeWMax			= (int) ((long[])	ifd.get(Tag.ActiveArea))[3] - activeWMin;
+			int			activeLMax			= (int) ((long[])	ifd.get(Tag.ActiveArea))[2] - activeLMin;
+
+			// CFA pattern description
+			short[]		planeColor			= (short[])			ifd.get(Tag.CFAPlaneColor);
+			short[]		pattern				= (short[])			ifd.get(Tag.CFAPattern);
+			int[]		repeatPatternDim	= (int[])			ifd.get(Tag.CFARepeatPatternDim);
+
+			// Black & white levels
+			RATIONAL[]	blackLevel			= (RATIONAL[])		ifd.get(Tag.BlackLevel);
+			int[]		blackLevelRepeatDim	= (int[])			ifd.get(Tag.BlackLevelRepeatDim);
+
+			image = new long[activeWMax][activeLMax][3];
+
+			// See TIFF 6.0 Specification, page 39
+			for (int i = 0; i < (length + rowsPerStrip - 1) / rowsPerStrip; i++) {
+
+				short[] strip = ifd.getStripAsShortArray(i);
+
+				for (int j = 0; j*pixelSize < strip.length; j = j + 1) {
+
+					int w = j%width - activeWMin;
+					int l = j/width + i*rowsPerStrip - activeLMin;
+
+					if (w < 0 || w > activeWMax || l < 0 || l > activeLMax) continue;
+
+					// See Digital Negative Specification Version 1.4.0.0, page 27: "The origin of this pattern is the top-left corner of the ActiveArea rectangle"
+					// blackLevel[w%blackLevelRepeatDim[0]*2 + l%blackLevelRepeatDim[1]].intValue();
+
+					// See TIFF/EP, page 26
+					image[w][l][planeColor[pattern[(w + activeWMin)%repeatPatternDim[0]*2 + (l + activeLMin)%repeatPatternDim[1]]]] =
+						// TODO assuming SamplesPerPixel = 1
+						readPixel(strip, j*pixelSize)[0];
+
+				}
+
+			}
+
+			System.out.println("CFA Pattern");
+			for (int i = 0; i < repeatPatternDim[0]; i++)  {
+				System.out.print("\t");
+				for (int j = 0; j < repeatPatternDim[1]; j++)
+					System.out.print(planeColor[pattern[(i + activeWMin)%repeatPatternDim[0]*2 + (j + activeLMin)%repeatPatternDim[1]]]);
+				System.out.println();
+			}
+			System.out.println();
+
+			System.out.println("Black levels");
+			for (int i = 0; i < blackLevelRepeatDim[0]; i++)  {
+				System.out.print("\t");
+				for (int j = 0; j < blackLevelRepeatDim[1]; j++)
+					System.out.print(blackLevel[i%blackLevelRepeatDim[0]*2 + j%blackLevelRepeatDim[1]].doubleValue() + "\t");
+				System.out.println();
+			}
+			System.out.println();
+
+		}
+
+		System.out.print("White level: [ ");
+		for (int i = 0; i < whiteLevel.length; i++) {
+			System.out.print(whiteLevel[i]);
+			System.out.print(" ");
+		}
+		System.out.println("]");
+		System.out.println();
+
+		for (int w = 0; w < 2; w++) {
+			for (int l = 0; l < 2; l++) {
+				System.out.print("[ ");
+				for (int i = 0; i < 3; i++) {
+					System.out.print(image[w][l][i]);
+					System.out.print(" ");
+				}
+				System.out.print("] ");
+			}
+			System.out.println();
+		}
+		System.out.println();
+
+	}
+
+	public void highResolutionIfd_old(ImageFileDirectory ifd) throws TiffProcessorException {
 
 		/*
 		 * Image size, active area and crop area. See
@@ -303,10 +450,10 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 			cameraNeutral
 		);
 
-		image = new double[cropWMax][cropLMax][];
+		/*image = new double[cropWMax][cropLMax][];
 		for (int w = 0; w < cropWMax; w++) for (int l = 0; l < cropLMax; l++)
 			this.image[w][l] = Math.multiply(cameraToXYZ_D50, demosaice(activeImage, w + cropWMin, l + cropLMin));
-			//image[w][l] = demosaice(activeImage, w + cropWMin, l + cropLMin);
+			//image[w][l] = demosaice(activeImage, w + cropWMin, l + cropLMin);*/
 
 		System.out.println("After demosaicing");
 
@@ -322,7 +469,7 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 			System.out.println();
 		}
 
-		new ImageFrame(new ImageSRGB(this.image), 1075, 716);
+		//new ImageFrame(new ImageSRGB(this.image), 1075, 716);
 		//new ImageFrame(new ImageSRGB(this.image), width, length);
 
 	}
@@ -397,10 +544,6 @@ public class LoadNonLinearHighResolutionImage extends AbstractTiffProcessor {
 	private double cct(double[] chromaticityCoordinates) {
 		double n = (chromaticityCoordinates[0] - 0.3320D)/(chromaticityCoordinates[1] - 0.1858D);
 		return -449D*java.lang.Math.pow(n, 3D) + 3525D*java.lang.Math.pow(n, 2D) - 6823.3D*n + 5520.33D;
-	}
-
-	public static void main(String[] args) throws Exception {
-		new TiffProcessorEngine(new FileInputStream(args[0]), new LoadNonLinearHighResolutionImage()).run();
 	}
 
 }
