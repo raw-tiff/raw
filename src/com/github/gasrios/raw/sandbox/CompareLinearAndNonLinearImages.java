@@ -10,14 +10,6 @@
  * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-/*
- * TODO assuming Orientation = 1
- * TODO assuming Compression = 1
- * TODO assuming PlanarConfiguration = 1
- * TODO assuming PhotometricInterpretation = 32.803
- * TODO assuming CFALayout = 1
- */
-
 package com.github.gasrios.raw.sandbox;
 
 import java.io.FileInputStream;
@@ -97,12 +89,6 @@ public class CompareLinearAndNonLinearImages extends AbstractTiffProcessor {
 		System.out.println("Photometric interpretation: " + photometricInterpretation);
 		System.out.println();
 
-		System.out.print("Size: ");
-		System.out.print(width);
-		System.out.print(", ");
-		System.out.println(length);
-		System.out.println();
-
 		if (photometricInterpretation == 34892) {
 
 			// Linear
@@ -170,6 +156,15 @@ public class CompareLinearAndNonLinearImages extends AbstractTiffProcessor {
 
 			}
 
+			System.out.print("Active area: [ ");
+			long[] activeArea = (long[])  ifd.get(Tag.ActiveArea);
+			for (int i = 0; i < activeArea.length; i++) {
+				System.out.print(activeArea[i]);
+				System.out.print(" ");
+			}
+			System.out.println("]");
+			System.out.println();
+
 			System.out.println("CFA Pattern");
 			for (int i = 0; i < repeatPatternDim[0]; i++)  {
 				System.out.print("\t");
@@ -198,8 +193,14 @@ public class CompareLinearAndNonLinearImages extends AbstractTiffProcessor {
 		System.out.println("]");
 		System.out.println();
 
-		for (int w = 0; w < 2; w++) {
-			for (int l = 0; l < 2; l++) {
+		System.out.print("Size: ");
+		System.out.print(image.length);
+		System.out.print(", ");
+		System.out.println(image[0].length);
+		System.out.println();
+
+		for (int w = 0; w < 8; w++) {
+			for (int l = 0; l < 8; l++) {
 				System.out.print("[ ");
 				for (int i = 0; i < 3; i++) {
 					System.out.print(image[w][l][i]);
