@@ -52,7 +52,7 @@ public class ImageSRGB extends BufferedImage {
 	private synchronized void setRGB(int column, int row, int[] pixel) { setRGB(column, row, (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]); }
 
 	private int[] toSRGB(double[] myLSH) {
-		double[] srgb = Math.multiply(XYZ_D50ToSRGB, Math.luv2xyz(Math.mylsh2luv(myLSH)));
+		double[] srgb = Math.multiply(XYZ_D50ToSRGB, Math.luv2xyz(Math.lsh2luv(myLSH)));
 		for (int i = 0; i < srgb.length; i++) srgb[i] = gammaCorrection(srgb[i]);
 		return to8bits(srgb);
 	}

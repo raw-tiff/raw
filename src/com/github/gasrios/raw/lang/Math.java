@@ -31,20 +31,29 @@ package com.github.gasrios.raw.lang;
  *
  * Similar problems happen with CIE 1976 (L*, u*, v*) and its LChuv variant: if you increase L* the image is desaturated.
  *
- * (See https://en.wikipedia.org/wiki/CIELUV, in particular session "Cylindrical representation (CIELCH)")
+ * See https://en.wikipedia.org/wiki/CIELUV and https://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation_.28CIELCH.29
  *
  * CIE 1976 (L*, a*, b*) was not tested and does not look promising, given it has no saturation definition.
  *
  * One option is to replace chroma with saturation (C/L) in LChuv. The resulting LSH color space is not formally specified
- * but seems closer to providing linearly independent dimensions than any other CIE color space. I  call it "myLSH".
+ * but seems closer to providing linearly independent dimensions than any other CIE color space.
+ *
+ * FIXME LSH still suffers from one major drawback: saturation is neither normalized nor bounded.
  */
 
 public final class Math {
 
 	// Image editing methods.
 
+	// Convert to B&W by desaturating image.
 	public static double[][][] blackAndWhite(double[][][] image) {
 		for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++) image[i][j][1] = 0;
+		return image;
+	}
+
+	// Increase image saturation by given percentage
+	public static double[][][] saturate(double[][][] image, double percentage) {
+		for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++) image[i][j][1] *= (1 + percentage);
 		return image;
 	}
 
@@ -93,13 +102,13 @@ public final class Math {
 	}
 
 	// See http://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation
-	public static double[] luv2mylsh(double[] luv) {
+	public static double[] luv2lsh(double[] luv) {
 		return (luv[0] == 0D)?
 			new double[] { 0D, 0D, 0D }:
 			new double[] { luv[0], java.lang.Math.pow(java.lang.Math.pow(luv[1], 2) + java.lang.Math.pow(luv[2], 2), .5D)/luv[0], java.lang.Math.atan2(luv[2], luv[1]) };
 	}
 
-	public static double[] mylsh2luv(double[] lsh) {
+	public static double[] lsh2luv(double[] lsh) {
 		return new double[] { lsh[0], lsh[0]*lsh[1]*java.lang.Math.cos(lsh[2]), lsh[0]*lsh[1]*java.lang.Math.sin(lsh[2]) };
 	}
 

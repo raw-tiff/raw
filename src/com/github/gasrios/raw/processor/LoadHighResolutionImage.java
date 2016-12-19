@@ -133,7 +133,7 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 			XYZ[0] = maxX*normalize(minX, XYZ[0], maxX);
 			XYZ[1] = maxY*normalize(minY, XYZ[1], maxY);
 			XYZ[2] = maxZ*normalize(minZ, XYZ[2], maxZ);
-			image[i][j] = Math.luv2mylsh(Math.xyz2luv(XYZ));
+			image[i][j] = Math.luv2lsh(Math.xyz2luv(XYZ));
 		}
 
 	}
