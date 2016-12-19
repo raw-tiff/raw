@@ -5,12 +5,11 @@
  * as published by the Free Software Foundation, version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
+ * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-// TODO Add default values to all fields that have them.
 package com.github.gasrios.raw.data;
 
 import java.io.IOException;
@@ -21,6 +20,8 @@ import java.util.TreeMap;
 import com.github.gasrios.raw.io.TiffInputStream;
 import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.lang.TiffProcessorRuntimeException;
+
+//TODO Add default values to all fields that have them.
 
 public final class ImageFileDirectory extends TreeMap<Tag, Object> {
 

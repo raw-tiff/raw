@@ -5,10 +5,12 @@
  * as published by the Free Software Foundation, version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
+ * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
+
+package com.github.gasrios.raw.data;
 
 /*
  * The tags below were collected from several online resources. Refer to them for additional info.
@@ -18,8 +20,6 @@
  * http://www.ozhiker.com/electronics/pjmt/jpeg_info/canon_mn.html
  * http://www.burren.cx/david/canon.html
  */
-
-package com.github.gasrios.raw.data;
 
 public final class CanonMakerNoteTag extends MakerNoteTag {
 

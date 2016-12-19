@@ -5,10 +5,30 @@
  * as published by the Free Software Foundation, version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
+ * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
+
+package com.github.gasrios.raw.io;
+
+import java.io.BufferedInputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.github.gasrios.raw.data.CanonMakerNoteTag;
+import com.github.gasrios.raw.data.InteroperabilityTag;
+import com.github.gasrios.raw.data.MakerNoteTag;
+import com.github.gasrios.raw.data.Tag;
+import com.github.gasrios.raw.data.Type;
+import com.github.gasrios.raw.lang.RATIONAL;
+import com.github.gasrios.raw.lang.SRATIONAL;
+import com.github.gasrios.raw.lang.TiffProcessorException;
 
 /*
  * See "TIFF Revision 6.0 Final - June 3, 1992", page 15.
@@ -41,26 +61,6 @@
  *
  * - UNDEFINED is read as byte.
  */
-
-package com.github.gasrios.raw.io;
-
-import java.io.BufferedInputStream;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.github.gasrios.raw.data.CanonMakerNoteTag;
-import com.github.gasrios.raw.data.InteroperabilityTag;
-import com.github.gasrios.raw.data.MakerNoteTag;
-import com.github.gasrios.raw.data.Tag;
-import com.github.gasrios.raw.data.Type;
-import com.github.gasrios.raw.lang.RATIONAL;
-import com.github.gasrios.raw.lang.SRATIONAL;
-import com.github.gasrios.raw.lang.TiffProcessorException;
 
 public class TiffInputStream extends BufferedInputStream {
 

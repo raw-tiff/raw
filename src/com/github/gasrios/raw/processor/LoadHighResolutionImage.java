@@ -5,10 +5,24 @@
  * as published by the Free Software Foundation, version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
+ * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
+
+package com.github.gasrios.raw.processor;
+
+import java.nio.ByteOrder;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.github.gasrios.raw.data.Illuminant;
+import com.github.gasrios.raw.data.ImageFileDirectory;
+import com.github.gasrios.raw.data.Tag;
+import com.github.gasrios.raw.lang.Math;
+import com.github.gasrios.raw.lang.RATIONAL;
+import com.github.gasrios.raw.lang.SRATIONAL;
+import com.github.gasrios.raw.lang.TiffProcessorException;
 
 /*
  * This class makes all transformations deemed too complex to be at com.github.gasrios.raw.data.ImageFileDirectoryLoader when processing
@@ -29,20 +43,6 @@
  * TODO assuming PlanarConfiguration = 1
  * TODO assuming SamplesPerPixel = 3. See Tags ReductionMatrix1 and ReductionMatrix2.
  */
-
-package com.github.gasrios.raw.processor;
-
-import java.nio.ByteOrder;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.github.gasrios.raw.data.Illuminant;
-import com.github.gasrios.raw.data.ImageFileDirectory;
-import com.github.gasrios.raw.data.Tag;
-import com.github.gasrios.raw.lang.Math;
-import com.github.gasrios.raw.lang.RATIONAL;
-import com.github.gasrios.raw.lang.SRATIONAL;
-import com.github.gasrios.raw.lang.TiffProcessorException;
 
 public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
@@ -83,7 +83,7 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 		 * interpolation to get the correct weight.
 		 */
 		double weight =
-			1D - Math.normalize(
+			1D - normalize(
 				1/ILLUMINANTS.get((int) data.get(Tag.CalibrationIlluminant2)).cct,
 				1/cct(XYZ2xy(Math.multiply(cameraToXYZ_D50(0.5D, cameraNeutral), cameraNeutral))),
 				1/ILLUMINANTS.get((int) data.get(Tag.CalibrationIlluminant1)).cct
@@ -127,15 +127,18 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 			}
 		}
 
-		// Fixes rounding errors
+		// Fixes rounding errors & convert image to color space myLSH (see main comment in com.github.gasrios.raw.lang.Math)
 		for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++) {
 			double[] XYZ = image[i][j];
-			XYZ[0] = maxX*Math.normalize(minX, XYZ[0], maxX);
-			XYZ[1] = maxY*Math.normalize(minY, XYZ[1], maxY);
-			XYZ[2] = maxZ*Math.normalize(minZ, XYZ[2], maxZ);
+			XYZ[0] = maxX*normalize(minX, XYZ[0], maxX);
+			XYZ[1] = maxY*normalize(minY, XYZ[1], maxY);
+			XYZ[2] = maxZ*normalize(minZ, XYZ[2], maxZ);
+			image[i][j] = Math.luv2mylsh(Math.xyz2luv(XYZ));
 		}
 
 	}
+
+	private double normalize(double b, double m, double t) { return m < b? 0 : m > t? 1 : (m-b)/(t-b); }
 
 	// http://www.brucelindbloom.com/index.html?Eqn_XYZ_to_xyY.html
 	private double[] XYZ2xy(double[] XYZ) { return new double[] { XYZ[0]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1] }; }

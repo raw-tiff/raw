@@ -5,22 +5,9 @@
  * as published by the Free Software Foundation, version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
- */
-
-/*
- * This class bridges the gap between (1) reading a DNG file and making its information available in an easy to use fashion and
- * (2) writing code that actually processes this information.
- *
- * The first half of the job is done by classes org.yoyo.dng.data.ImageFileDirectoryLoader and org.yoyo.dng.io.DngInputStream,
- * while the second by classes implementing interface org.yoyo.dng.processor.DngProcessor or extending the convenience class
- * org.yoyo.dng.processor.AbstractDngProcessor which provides empty implementations of all methods defined in the former.
- *
- * DngProcessorEngine creates an ImageFileDirectory then sweeps across all of its contents, invoking matching methods in
- * DngProcessor. So by implementing your DngProcessor you can focus on processing the parts of the file you care about
- * while ignoring everything else.
+ * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
 package com.github.gasrios.raw.processor;
@@ -36,6 +23,19 @@ import com.github.gasrios.raw.data.ImageFileDirectoryLoader;
 import com.github.gasrios.raw.data.Tag;
 import com.github.gasrios.raw.io.TiffInputStream;
 import com.github.gasrios.raw.lang.TiffProcessorException;
+
+/*
+ * This class bridges the gap between (1) reading a DNG file and making its information available in an easy to use fashion and
+ * (2) writing code that actually processes this information.
+ *
+ * The first half of the job is done by classes org.yoyo.dng.data.ImageFileDirectoryLoader and org.yoyo.dng.io.DngInputStream,
+ * while the second by classes implementing interface org.yoyo.dng.processor.DngProcessor or extending the convenience class
+ * org.yoyo.dng.processor.AbstractDngProcessor which provides empty implementations of all methods defined in the former.
+ *
+ * DngProcessorEngine creates an ImageFileDirectory then sweeps across all of its contents, invoking matching methods in
+ * DngProcessor. So by implementing your DngProcessor you can focus on processing the parts of the file you care about
+ * while ignoring everything else.
+ */
 
 public final class TiffProcessorEngine {
 

@@ -5,10 +5,12 @@
  * as published by the Free Software Foundation, version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
+ * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
+
+package com.github.gasrios.raw.lang;
 
 /*
  * See "TIFF Revision 6.0 Final - June 3, 1992", page 15.
@@ -22,8 +24,6 @@
  * with precision issues that conversions to double might introduce. For this reason we create this class and its two subclasses,
  * com.github.gasrios.raw.lang.RATIONAL and com.github.gasrios.raw.lang.SRATIONAL.
  */
-
-package com.github.gasrios.raw.lang;
 
 public abstract class TiffNumber extends Number implements Comparable<TiffNumber> {
 

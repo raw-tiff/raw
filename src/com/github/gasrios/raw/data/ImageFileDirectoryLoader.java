@@ -5,21 +5,9 @@
  * as published by the Free Software Foundation, version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
- */
-
-/*
- * Straightforward transformations are applied here, when we can assume they are sensible:
- *
- * - Offsets are replaced by real values;
- * - XMP content is processed and properties embedded in XML are extracted.
- *
- * Complex transformations and those that change the structure of the original info, for example processing of CFA tags to
- * extract a pattern, do not happen here.
- *
- * Image processing also is assumed to happen elsewhere.
+ * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
 package com.github.gasrios.raw.data;
@@ -39,6 +27,18 @@ import com.github.gasrios.raw.io.TiffInputStream;
 import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.lang.RATIONAL;
 import com.github.gasrios.raw.lang.SRATIONAL;
+
+/*
+ * Straightforward transformations are applied here, when we can assume they are sensible:
+ *
+ * - Offsets are replaced by real values;
+ * - XMP content is processed and properties embedded in XML are extracted.
+ *
+ * Complex transformations and those that change the structure of the original info, for example processing of CFA tags to
+ * extract a pattern, do not happen here.
+ *
+ * Image processing also is assumed to happen elsewhere.
+ */
 
 public final class ImageFileDirectoryLoader {
 

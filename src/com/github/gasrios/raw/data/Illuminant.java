@@ -5,10 +5,12 @@
  * as published by the Free Software Foundation, version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
+ * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
+
+package com.github.gasrios.raw.data;
 
 /*
  * Legal values for CalibrationIlluminant1 and CalibrationIlluminant2.
@@ -44,8 +46,6 @@
  *   255	Other light source					-1			-1			  -1	Other light source
  *    -1	Reserved							-1			-1			  -1	Reserved
  */
-
-package com.github.gasrios.raw.data;
 
 public enum Illuminant {
 

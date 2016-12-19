@@ -5,9 +5,9 @@
  * as published by the Free Software Foundation, version 3 of the License.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
+ * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
 package com.github.gasrios.raw.sandbox;
@@ -78,7 +78,7 @@ public class CompareLinearAndNonLinearImages extends AbstractTiffProcessor {
 		// TODO can be SHORT or LONG
 		int			rowsPerStrip		= (int) (long)		ifd.get(Tag.RowsPerStrip);
 
-		int[]		whiteLevel			= (int[])				ifd.get(Tag.WhiteLevel);
+		int[]		whiteLevel			= (int[])			ifd.get(Tag.WhiteLevel);
 
 		data.put(Tag.SamplesPerPixel,	samplesPerPixel);
 		data.put(Tag.BitsPerSample,		bitsPerSample);
@@ -443,7 +443,7 @@ public class CompareLinearAndNonLinearImages extends AbstractTiffProcessor {
 		 * For the first step we assume weight = 0.5
 		 */
 		double[][] cameraToXYZ_D50 = cameraToXYZ_D50(
-			1D - Math.normalize(
+			1D - normalize(
 				1/ILLUMINANTS.get((int) data.get(Tag.CalibrationIlluminant2)).cct,
 				1/cct(XYZ2xy(Math.multiply(cameraToXYZ_D50(0.5D, cameraNeutral), cameraNeutral))),
 				1/ILLUMINANTS.get((int) data.get(Tag.CalibrationIlluminant1)).cct
@@ -474,6 +474,8 @@ public class CompareLinearAndNonLinearImages extends AbstractTiffProcessor {
 		//new ImageFrame(new ImageSRGB(this.image), width, length);
 
 	}
+
+	private double normalize(double b, double m, double t) { return m < b? 0 : m > t? 1 : (m-b)/(t-b); }
 
 	// TODO implement demosaicing algorithm
 	private double[] demosaice(double[][][] image, int w, int l) {
