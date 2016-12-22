@@ -62,7 +62,7 @@ Class com.github.gasrios.raw.processor.TiffProcessorEngine uses ImageFileDirecto
 
 "Non core" is concerned with the useful stuff.
 
-Class com.github.gasrios.raw.LoadHighResolutionImage provides a TiffProcessor that will load the image and its metadata, then convert them to an agnostic format. Image editors will extend it, implement method end() and then consume protected attributes "imageData" and "image".
+Class com.github.gasrios.raw.LoadHighResolutionImage provides a TiffProcessor that will load the image, then convert it to an agnostic format. Image editors will extend it, implement method end() and then consume the protected attribute "image".
 
 ** Understanding the core **
 

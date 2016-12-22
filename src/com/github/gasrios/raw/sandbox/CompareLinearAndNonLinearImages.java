@@ -214,6 +214,7 @@ public class CompareLinearAndNonLinearImages extends AbstractTiffProcessor {
 
 	}
 
+	@SuppressWarnings("unused")
 	public void highResolutionIfd_old(ImageFileDirectory ifd) throws TiffProcessorException {
 
 		/*
@@ -478,6 +479,7 @@ public class CompareLinearAndNonLinearImages extends AbstractTiffProcessor {
 	private double normalize(double b, double m, double t) { return m < b? 0 : m > t? 1 : (m-b)/(t-b); }
 
 	// TODO implement demosaicing algorithm
+	@SuppressWarnings("unused")
 	private double[] demosaice(double[][][] image, int w, int l) {
 
 		double[] pixel = new double[] { image[w][l][0], image[w][l][1], image[w][l][2] };

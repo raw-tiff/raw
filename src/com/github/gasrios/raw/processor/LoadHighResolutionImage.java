@@ -13,10 +13,7 @@
 package com.github.gasrios.raw.processor;
 
 import java.nio.ByteOrder;
-import java.util.HashMap;
-import java.util.Map;
 
-import com.github.gasrios.raw.data.Illuminant;
 import com.github.gasrios.raw.data.ImageFileDirectory;
 import com.github.gasrios.raw.data.Tag;
 import com.github.gasrios.raw.lang.Math;
@@ -32,64 +29,50 @@ import com.github.gasrios.raw.lang.TiffProcessorException;
  *
  * 2. Converts camera coordinates to XYZ D50 values;
  *
- * 3. Puts all information spread around several IFDs inside the same data structure.
- *
  * This pretty much ends all the dirty work needed to read the TIFF file and makes its information available to people whose
- * business is doing actual photo editing. Just extend this class and consume the info in attributes image and imageData.
+ * business is doing actual photo editing. Just extend this class and consume the info in attribute image.
  *
  * TODO assuming Orientation = 1
  * TODO assuming Compression = 1
- * TODO assuming PhotometricInterpretation = 34.892
+ * TODO assuming PhotometricInterpretation = 34892
  * TODO assuming PlanarConfiguration = 1
  * TODO assuming SamplesPerPixel = 3. See Tags ReductionMatrix1 and ReductionMatrix2.
  */
 
 public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
-	private static final Map<Integer, Illuminant> ILLUMINANTS = new HashMap<Integer, Illuminant>();
-	static { for (Illuminant illuminant: Illuminant.values()) ILLUMINANTS.put(illuminant.value, illuminant); }
-
-	protected Map<Object, Object> data;
-
 	protected double[][][] image;
 
-	public LoadHighResolutionImage() { data = new HashMap<Object, Object>(); }
+	private RATIONAL[]	analogBalance;
+	private RATIONAL[]	asShotNeutral;
+	private int[]		bitsPerSample;;
+	private int			calibrationIlluminant1;
+	private int			calibrationIlluminant2;
+	private SRATIONAL[] cameraCalibration1;
+	private SRATIONAL[] cameraCalibration2;
+	private SRATIONAL[] colorMatrix1;
+	private SRATIONAL[] colorMatrix2;
+	private SRATIONAL[] forwardMatrix1;
+	private SRATIONAL[] forwardMatrix2;
+	private int			samplesPerPixel;
 
 	@Override public void firstIfd(ImageFileDirectory ifd) {
-		data.put(Tag.AsShotNeutral,				ifd.get(Tag.AsShotNeutral));
-		data.put(Tag.CalibrationIlluminant1,	ifd.get(Tag.CalibrationIlluminant1));
-		data.put(Tag.CalibrationIlluminant2,	ifd.get(Tag.CalibrationIlluminant2));
-		data.put(Tag.CameraCalibration1,		ifd.get(Tag.CameraCalibration1));
-		data.put(Tag.ForwardMatrix1,			ifd.get(Tag.ForwardMatrix1));
-		data.put(Tag.ForwardMatrix2,			ifd.get(Tag.ForwardMatrix2));
+		analogBalance		   = (RATIONAL[])  ifd.get(Tag.AnalogBalance);
+		asShotNeutral		   = (RATIONAL[])  ifd.get(Tag.AsShotNeutral);
+		calibrationIlluminant1 = (int)		   ifd.get(Tag.CalibrationIlluminant1);
+		calibrationIlluminant2 = (int)		   ifd.get(Tag.CalibrationIlluminant2);
+		cameraCalibration1	   = (SRATIONAL[]) ifd.get(Tag.CameraCalibration1);
+		cameraCalibration2	   = (SRATIONAL[]) ifd.get(Tag.CameraCalibration2);
+		colorMatrix1		   = (SRATIONAL[]) ifd.get(Tag.ColorMatrix1);
+		colorMatrix2		   = (SRATIONAL[]) ifd.get(Tag.ColorMatrix2);
+		forwardMatrix1		   = (SRATIONAL[]) ifd.get(Tag.ForwardMatrix1);
+		forwardMatrix2		   = (SRATIONAL[]) ifd.get(Tag.ForwardMatrix2);
 	}
 
 	@Override public void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
 
-		data.put(Tag.BitsPerSample,		ifd.get(Tag.BitsPerSample));
-		data.put(Tag.SamplesPerPixel,	ifd.get(Tag.SamplesPerPixel));
-
-		// See See Digital Negative Specification Version 1.4.0.0, page 79
-		double[] cameraNeutral = RATIONAL.asDoubleArray((RATIONAL[]) data.get(Tag.AsShotNeutral));
-
-		/*
-		 * Calculate the interpolation weighting factor associated with tag AsShotNeutral. Oddly enough, cameraToXYZ_D50 correctly
-		 * maps AsShotNeutral to D50 white point for any interpolation weighting factor. This is very good but rather unexpected.
-		 * A nice collateral effect is we do not need to iterate over weight to find the right value, just once is enough.
-		 *
-		 * For the first step we assume weight = 0.5
-		 *
-		 * Remember we interpolate over the *inverse* of CCT, so bigger becomes smaller and we need to subtract one from the
-		 * interpolation to get the correct weight.
-		 */
-		double weight =
-			1D - normalize(
-				1/ILLUMINANTS.get((int) data.get(Tag.CalibrationIlluminant2)).cct,
-				1/cct(XYZ2xy(Math.multiply(cameraToXYZ_D50(0.5D, cameraNeutral), cameraNeutral))),
-				1/ILLUMINANTS.get((int) data.get(Tag.CalibrationIlluminant1)).cct
-			);
-
-		double[][] cameraToXYZ_D50 = cameraToXYZ_D50(weight, cameraNeutral);
+		samplesPerPixel = ((int)  ifd.get(Tag.SamplesPerPixel));
+		bitsPerSample	= (int[]) ifd.get(Tag.BitsPerSample);
 
 		// FIXME TIFF property is LONG, but java arrays have their size defined as int.
 		int width   = (int) (long) ifd.get(Tag.ImageWidth);
@@ -98,80 +81,46 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 		image = new double[width][length][0];
 
 		int pixelSize = 0;
-		for (int i = 0; i < ((int) ifd.get(Tag.SamplesPerPixel)); i++) pixelSize += 1 + (((int[]) ifd.get(Tag.BitsPerSample)) [i]-1)/8;
+		for (int i = 0; i < samplesPerPixel; i++) pixelSize += 1 + (bitsPerSample[i]-1)/8;
 
 		int rowsPerStrip = (int) (long) ifd.get(Tag.RowsPerStrip);
 
-		double
-			minX = Double.MAX_VALUE,
-			maxX = Double.MIN_VALUE,
-			minY = Double.MAX_VALUE,
-			maxY = Double.MIN_VALUE,
-			minZ = Double.MAX_VALUE,
-			maxZ = Double.MIN_VALUE;
+		double[][] cameraToXYZ_D50 = Math.cameraToXYZ_D50(
+			analogBalance,
+			asShotNeutral,
+			calibrationIlluminant1,
+			calibrationIlluminant2,
+			cameraCalibration1,
+			cameraCalibration2,
+			colorMatrix1,
+			colorMatrix2,
+			forwardMatrix1,
+			forwardMatrix2
+		);
 
 		// See TIFF 6.0 Specification, page 39
 		for (int i = 0; i < (int) ((length + rowsPerStrip - 1) / rowsPerStrip); i++) {
 			short[] strip;
 			strip = ifd.getStripAsShortArray(i);
-			for (int j = 0; pixelSize*j < strip.length; j = j + 1) {
-				// TODO assuming SamplesPerPixel = 3. See Tags ReductionMatrix1 and ReductionMatrix2.
-				double[] XYZ = com.github.gasrios.raw.lang.Math.multiply(cameraToXYZ_D50, readPixel(strip, j*pixelSize, ifd.getByteOrder()));
-				if (minX > XYZ[0]) minX = XYZ[0];
-				if (maxX < XYZ[0]) maxX = XYZ[0];
-				if (minY > XYZ[1]) minY = XYZ[1];
-				if (maxY < XYZ[1]) maxY = XYZ[1];
-				if (minZ > XYZ[2]) minZ = XYZ[2];
-				if (maxZ < XYZ[2]) maxZ = XYZ[2];
-				image[j % width][j/width + i*rowsPerStrip] = XYZ;
-			}
+			for (int j = 0; pixelSize*j < strip.length; j = j + 1)
+				image[j%width][j/width + i*rowsPerStrip] =
+					Math.multiply(
+						cameraToXYZ_D50,
+						readPixel(strip, j*pixelSize, ifd.getByteOrder())
+					);
 		}
 
-		// Fixes rounding errors & convert image to color space myLSH (see main comment in com.github.gasrios.raw.lang.Math)
-		for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++) {
-			double[] XYZ = image[i][j];
-			XYZ[0] = maxX*normalize(minX, XYZ[0], maxX);
-			XYZ[1] = maxY*normalize(minY, XYZ[1], maxY);
-			XYZ[2] = maxZ*normalize(minZ, XYZ[2], maxZ);
-			image[i][j] = Math.luv2lsh(Math.xyz2luv(XYZ));
-		}
+		// Convert image to LSH (see main comment in com.github.gasrios.raw.lang.Math)
+		/*for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++) {
+			double[] xyz = image[i][j];
+			image[i][j] = Math.luv2lsh(Math.xyz2luv(xyz));
+		}*/
 
-	}
-
-	private double normalize(double b, double m, double t) { return m < b? 0 : m > t? 1 : (m-b)/(t-b); }
-
-	// http://www.brucelindbloom.com/index.html?Eqn_XYZ_to_xyY.html
-	private double[] XYZ2xy(double[] XYZ) { return new double[] { XYZ[0]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1]/(XYZ[0]+XYZ[1]+XYZ[2]), XYZ[1] }; }
-
-	// McCamy's cubic approximation (http://en.wikipedia.org/wiki/Color_temperature#Approximation)
-	private double cct(double[] chromaticityCoordinates) {
-		double n = (chromaticityCoordinates[0] - 0.3320D)/(chromaticityCoordinates[1] - 0.1858D);
-		return -449D*java.lang.Math.pow(n, 3D) + 3525D*java.lang.Math.pow(n, 2D) - 6823.3D*n + 5520.33D;
-	}
-
-	// See Digital Negative Specification Version 1.4.0.0, Chapter 6: "Mapping Camera Color Space to CIE XYZ Space"
-	private double[][] cameraToXYZ_D50(double weight, double[] cameraNeutral) {
-		double[][] inverseCC = Math.inverse(Math.vector2Matrix(SRATIONAL.asDoubleArray((SRATIONAL[]) data.get(Tag.CameraCalibration1))));
-		return
-			Math.multiply(
-				Math.multiply(
-					Math.weightedAverage(
-						Math.vector2Matrix(SRATIONAL.asDoubleArray((SRATIONAL[]) data.get(Tag.ForwardMatrix1))),
-						Math.vector2Matrix(SRATIONAL.asDoubleArray((SRATIONAL[]) data.get(Tag.ForwardMatrix2))),
-						weight
-					),
-					Math.inverse(Math.asDiagonalMatrix(com.github.gasrios.raw.lang.Math.multiply(inverseCC, cameraNeutral)))
-				),
-				inverseCC
-			);
 	}
 
 	// TODO Assuming in the conversion pixel data is always unsigned. Double check this.
 	// TODO Divide by WhiteLevel, not constant.
 	private double[] readPixel(short[] strip, int offset, ByteOrder byteOrder) {
-
-		int samplesPerPixel = ((int) data.get(Tag.SamplesPerPixel));
-		int[] bitsPerSample = (int[]) data.get(Tag.BitsPerSample);
 
 		double[] pixel = new double[samplesPerPixel];
 

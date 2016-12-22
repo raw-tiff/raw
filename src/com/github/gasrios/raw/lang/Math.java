@@ -12,6 +12,11 @@
 
 package com.github.gasrios.raw.lang;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import com.github.gasrios.raw.data.Illuminant;
+
 /*
  * A note on image editing and CIE color spaces
  *
@@ -43,7 +48,9 @@ package com.github.gasrios.raw.lang;
 
 public final class Math {
 
-	// Image editing methods.
+	/*
+	 * Image editing methods.
+	 */
 
 	// Convert to B&W by desaturating image.
 	public static double[][][] blackAndWhite(double[][][] image) {
@@ -61,8 +68,8 @@ public final class Math {
 	 * Color space conversions.
 	 *
 	 * FIXME Need to correct rounding mistakes?
-	 * FIXME luv2mylsh(xyz2luv(XYZ)) should be replaced with xyz2mylsh(XYZ)
-	 * FIXME mylsh2luv(luv2xyz(LSH)) should be replaced with mylsh2xyz(LSH)
+	 * FIXME luv2lsh(xyz2luv(XYZ)) should be replaced with xyz2lsh(XYZ)
+	 * FIXME lsh2luv(luv2xyz(LSH)) should be replaced with lsh2xyz(LSH)
 	 */
 
 	static private final double
@@ -112,7 +119,257 @@ public final class Math {
 		return new double[] { lsh[0], lsh[0]*lsh[1]*java.lang.Math.cos(lsh[2]), lsh[0]*lsh[1]*java.lang.Math.sin(lsh[2]) };
 	}
 
-	// Matrix operations
+	/*
+	 * See Digital Negative Specification Version 1.4.0.0, page 82.
+	 *
+	 * ReferenceNeutral = Inverse(AB * CC) * CameraNeutral
+	 *
+	 * D = Invert(AsDiagonalMatrix(ReferenceNeutral))
+	 *
+	 * CameraToXYZ_D50 = FM * D * Inverse(AB * CC)
+	 *
+	 * See Digital Negative Specification Version 1.4.0.0, page 80.
+	 *
+	 * Let AB be the n-by-n matrix, which is zero except for the diagonal entries, which are defined by the AnalogBalance tag.
+	 *
+	 * Let CC be the n-by-n matrix interpolated from the CameraCalibration1 and CameraCalibration2 tags (or identity
+	 * matrices, if the signatures don’t match).
+	 *
+	 * Let FM be the 3-by-n matrix interpolated from the ForwardMatrix1 and ForwardMatrix2 tags.
+	 *
+	 * CameraCalibration1 defines a calibration matrix that transforms reference camera native space values to individual
+	 * camera native space values under the first calibration illuminant. The matrix is stored in row scan order.
+	 *
+	 * This matrix is stored separately from the matrix specified by the ColorMatrix1 tag to allow raw converters to swap in
+	 * replacement color matrices based on UniqueCameraModel tag, while still taking advantage of any per-individual camera
+	 * calibration performed by the camera manufacturer.
+	 *
+	 * ForwardMatrix1 defines a matrix that maps white balanced camera colors to XYZ D50 colors.
+	 */
+	public static double[][] cameraToXYZ_D50(
+		RATIONAL [] analogBalance,
+		RATIONAL [] asShotNeutral,
+		int			calibrationIlluminant1,
+		int			calibrationIlluminant2,
+		SRATIONAL[] cameraCalibration1,
+		SRATIONAL[] cameraCalibration2,
+		SRATIONAL[] colorMatrix1,
+		SRATIONAL[] colorMatrix2,
+		SRATIONAL[] forwardMatrix1,
+		SRATIONAL[] forwardMatrix2
+	) {
+
+		/*
+		 * See Digital Negative Specification Version 1.4.0.0, page 79
+		 *
+		 * Chapter 6 makes reference to "cameraNeutral", but the tag name is "asShotNeutral".
+		 */
+		double[] cameraNeutral = RATIONAL.asDoubleArray(asShotNeutral);
+
+		double weight =
+			interpolationWeightingFactor(
+				analogBalance,
+				calibrationIlluminant1,
+				calibrationIlluminant2,
+				cameraCalibration1,
+				cameraCalibration2,
+				cameraNeutral,
+				colorMatrix1,
+				colorMatrix2
+			);
+
+		double[][] invABxCC =
+			Math.inverse(
+				Math.multiply(
+					Math.asDiagonalMatrix(RATIONAL.asDoubleArray(analogBalance)),
+					Math.weightedAverage(
+						Math.vector2Matrix(SRATIONAL.asDoubleArray(cameraCalibration1)),
+						Math.vector2Matrix(SRATIONAL.asDoubleArray(cameraCalibration2)),
+						weight
+					)
+				)
+			);
+
+		double[][] cameraToXYZ_D50 = Math.multiply(
+			Math.multiply(
+				Math.weightedAverage(
+					Math.vector2Matrix(SRATIONAL.asDoubleArray(forwardMatrix1)),
+					Math.vector2Matrix(SRATIONAL.asDoubleArray(forwardMatrix2)),
+					weight
+				),
+				Math.inverse(Math.asDiagonalMatrix(Math.multiply(invABxCC, cameraNeutral)))
+			),
+			invABxCC
+		);
+
+		print(cameraToXYZ_D50);
+
+		return cameraToXYZ_D50;
+
+	}
+
+	private static void print(double[][] array) {
+		for (int i = 0; i < array.length; i++) {
+			for (int j = 0; j < array[i].length; j++) System.out.print(array[i][j] + "\t");
+			System.out.println();
+		}
+	}
+
+	/*
+	 * We don't really need the White Balance xy Coordinates, just the interpolation weighting factor, but the same process
+	 * calculates both.
+	 *
+	 * See Digital Negative Specification Version 1.4.0.0, page 80.
+	 *
+	 * Translating Camera Neutral Coordinates to White Balance xy Coordinates
+	 *
+	 * This process is slightly more complex than the transform in the other direction because it requires an iterative
+	 * solution.
+	 *
+	 * 1. Guess an xy value. Use that guess to find the interpolation weighting factor between the color calibration tags.
+	 *    Find the XYZtoCamera matrix as above.
+	 *
+	 * 2. Find a new xy value by computing:
+	 *		XYZ = Inverse(XYZtoCamera) * CameraNeutral
+	 *
+	 * 3. Convert the resulting XYZ to a new xy value.
+	 *
+	 * 4. Iterate until the xy values converge to a solution.
+	 */
+	private static double interpolationWeightingFactor(
+		RATIONAL [] analogBalance,
+		int			calibrationIlluminant1,
+		int			calibrationIlluminant2,
+		SRATIONAL[] cameraCalibration1,
+		SRATIONAL[] cameraCalibration2,
+		double[]	cameraNeutral,
+		SRATIONAL[] colorMatrix1,
+		SRATIONAL[] colorMatrix2
+	) {
+
+		double previousWeight;
+		// This is just an initial guess. Any value will do.
+		double weight = .5D;
+
+		do {
+			System.out.println(weight);
+			previousWeight = weight;
+			weight =
+				interpolationWeightingFactor(
+					xyz2xy(
+						Math.multiply(
+							Math.inverse(
+								xyzToCamera(weight, analogBalance, cameraCalibration1, cameraCalibration2, colorMatrix1, colorMatrix2)
+							),
+							cameraNeutral
+						)
+					),
+					calibrationIlluminant1,
+					calibrationIlluminant2
+				);
+		} while (previousWeight!= weight);
+
+		return weight;
+
+	}
+
+	private static final Map<Integer, Illuminant> ILLUMINANTS = new HashMap<Integer, Illuminant>();
+
+	static {
+		for (Illuminant illuminant: Illuminant.values()) ILLUMINANTS.put(illuminant.value, illuminant);
+	}
+
+	/*
+	 * See Digital Negative Specification Version 1.4.0.0, page 79.
+	 *
+	 * DNG 1.2.0.0 and later requires a specific interpolation algorithm: linear interpolation using inverse correlated
+	 * color temperature.
+	 *
+	 * To find the interpolation weighting factor between the two tag sets, find the correlated color temperature for the
+	 * user-selected white balance and the two calibration illuminants. If the white balance temperature is between two
+	 * calibration illuminant temperatures, then invert all the temperatures and use linear interpolation. Otherwise, use
+	 * the closest calibration tag set.
+	 */
+	private static double interpolationWeightingFactor(double[] xy, int calibrationIlluminant1, int calibrationIlluminant2) {
+		return
+			1D - normalize(
+				1/ILLUMINANTS.get(calibrationIlluminant2).cct,
+				1/cct(xy),
+				1/ILLUMINANTS.get(calibrationIlluminant1).cct
+			);
+	}
+
+	// McCamy's cubic approximation (http://en.wikipedia.org/wiki/Color_temperature#Approximation)
+	private static double cct(double[] chromaticityCoordinates) {
+		double n = (chromaticityCoordinates[0] - 0.3320D)/(chromaticityCoordinates[1] - 0.1858D);
+		return -449D*java.lang.Math.pow(n, 3D) + 3525D*java.lang.Math.pow(n, 2D) - 6823.3D*n + 5520.33D;
+	}
+
+	private static double normalize(double b, double m, double t) { return m < b? 0 : m > t? 1 : (m-b)/(t-b); }
+
+	/*
+	 * See Digital Negative Specification Version 1.4.0.0, page 79.
+	 *
+	 * Translating White Balance xy Coordinates to Camera Neutral Coordinates
+	 *
+	 * If the white balance is specified in terms of a CIE xy coordinate, then a camera neutral coordinate can be derived
+	 * by first finding the correlated color temperature for the xy value. This value determines the interpolation weighting
+	 * factor between the two sets of color calibration tags.
+	 *
+	 * The XYZ to camera space matrix is:
+	 *
+	 *	XYZtoCamera = AB * CC * CM
+	 *
+	 * The camera neutral can be found by expanding the xy value to a 3-by-1 XYZ matrix (assuming Y = 1.0) and multiplying it
+	 * by the XYZtoCamera matrix:
+	 *
+	 *	CameraNeutral = XYZtoCamera * XYZ
+	 *
+	 * See Digital Negative Specification Version 1.4.0.0, page 80.
+	 *
+	 * Let AB be the n-by-n matrix, which is zero except for the diagonal entries, which are defined by the AnalogBalance tag.
+	 *
+	 * Let CC be the n-by-n matrix interpolated from the CameraCalibration1 and CameraCalibration2 tags (or identity matrices,
+	 * if the signatures don’t match).
+	 *
+	 * Let CM be the n-by-3 matrix interpolated from the ColorMatrix1 and ColorMatrix2 tags.
+	 */
+	private static double[][] xyzToCamera(
+		double weight,
+		RATIONAL [] analogBalance,
+		SRATIONAL[] cameraCalibration1,
+		SRATIONAL[] cameraCalibration2,
+		SRATIONAL[] colorMatrix1,
+		SRATIONAL[] colorMatrix2
+	) {
+		return
+			Math.multiply(
+				Math.multiply(
+					Math.asDiagonalMatrix(RATIONAL.asDoubleArray(analogBalance)),
+					Math.weightedAverage(
+						Math.vector2Matrix(SRATIONAL.asDoubleArray(cameraCalibration1)),
+						Math.vector2Matrix(SRATIONAL.asDoubleArray(cameraCalibration2)),
+						weight
+					)
+				),
+				Math.weightedAverage(
+					Math.vector2Matrix(SRATIONAL.asDoubleArray(colorMatrix1)),
+					Math.vector2Matrix(SRATIONAL.asDoubleArray(colorMatrix2)),
+					weight
+				)
+			);
+	}
+
+	// http://www.brucelindbloom.com/index.html?Eqn_XYZ_to_xyY.html
+	private static double[] xyz2xy(double[] xyz) {
+		return (xyz[0]+xyz[1]+xyz[2]) == 0?
+			new double[] { 0, 0, 0 }:
+			new double[] { xyz[0]/(xyz[0]+xyz[1]+xyz[2]), xyz[1]/(xyz[0]+xyz[1]+xyz[2]), xyz[1] };
+	}
+
+	/*
+	 * Matrix operations
+	 */
 
 	public static double[] multiply(double[][] m, double[] v) {
 		double[] m2 = new double[m.length];
@@ -165,14 +422,12 @@ public final class Math {
 		return d;
 	}
 
-	private static double cofactor(int i, int j, double[][] m) {
-		return determinant(submatrix(i, j, m))*java.lang.Math.pow(-1, i+j);
-	}
+	private static double cofactor(int i, int j, double[][] m) { return determinant(submatrix(i, j, m))*java.lang.Math.pow(-1, i+j); }
 
 	private static double[][] submatrix(int row, int column, double[][] m) {
 		double[][] buffer = new double[m.length-1][m[0].length-1];
-		for (int i = 0; i < m.length; i ++) for (int j = 0; j < m.length; j ++)
-			if (i != row && j != column) buffer[i - (i < row? 0 : 1)][j - (j < column? 0 : 1)] = m[i][j];
+		for (int i = 0; i < m.length; i ++) for (int j = 0; j < m.length; j ++) if (i != row && j != column)
+			buffer[i - (i < row? 0 : 1)][j - (j < column? 0 : 1)] = m[i][j];
 		return buffer;
 	}
 
