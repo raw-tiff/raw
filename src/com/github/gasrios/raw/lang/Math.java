@@ -190,29 +190,19 @@ public final class Math {
 				)
 			);
 
-		double[][] cameraToXYZ_D50 = Math.multiply(
+		return
 			Math.multiply(
-				Math.weightedAverage(
-					Math.vector2Matrix(SRATIONAL.asDoubleArray(forwardMatrix1)),
-					Math.vector2Matrix(SRATIONAL.asDoubleArray(forwardMatrix2)),
-					weight
+				Math.multiply(
+					Math.weightedAverage(
+						Math.vector2Matrix(SRATIONAL.asDoubleArray(forwardMatrix1)),
+						Math.vector2Matrix(SRATIONAL.asDoubleArray(forwardMatrix2)),
+						weight
+					),
+					Math.inverse(Math.asDiagonalMatrix(Math.multiply(invABxCC, cameraNeutral)))
 				),
-				Math.inverse(Math.asDiagonalMatrix(Math.multiply(invABxCC, cameraNeutral)))
-			),
-			invABxCC
-		);
+				invABxCC
+			);
 
-		print(cameraToXYZ_D50);
-
-		return cameraToXYZ_D50;
-
-	}
-
-	private static void print(double[][] array) {
-		for (int i = 0; i < array.length; i++) {
-			for (int j = 0; j < array[i].length; j++) System.out.print(array[i][j] + "\t");
-			System.out.println();
-		}
 	}
 
 	/*
@@ -252,7 +242,6 @@ public final class Math {
 		double weight = .5D;
 
 		do {
-			System.out.println(weight);
 			previousWeight = weight;
 			weight =
 				interpolationWeightingFactor(
@@ -366,6 +355,40 @@ public final class Math {
 			new double[] { 0, 0, 0 }:
 			new double[] { xyz[0]/(xyz[0]+xyz[1]+xyz[2]), xyz[1]/(xyz[0]+xyz[1]+xyz[2]), xyz[1] };
 	}
+
+	/*
+	 * From http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+	 *
+	 * This matrix accounts for the illuminant D50, while IEC 61966-2-1:1999 (sRGB spec) uses D65.
+	public static final double[][] XYZ_D50ToSRGB = new double[][] {
+		new double[] {  3.1338561D, -1.6168667D, -0.4906146D },
+		new double[] { -0.9787684D,  1.9161415D,  0.0334540D },
+		new double[] {  0.0719453D, -0.2289914D,  1.4052427D }
+	};
+	 */
+
+	/*
+	 * Illuminant D65.
+	 */
+	public static final double[][] XYZ_D50ToSRGB = new double[][] {
+		new double[] {  3.2404542D, -1.5371385D, -0.4985314D },
+		new double[] { -0.9692660D,  1.8760108D,  0.0415560D },
+		new double[] {  0.0556434D, -0.2040259D,  1.0572252D }
+	};
+
+	public static int[] xyzToSRGB(double[] pixel) {
+		double[] srgb = Math.multiply(XYZ_D50ToSRGB, pixel);
+		//double[] srgb = Math.multiply(XYZ_D50ToSRGB, Math.luv2xyz(Math.lsh2luv(pixel)));
+		for (int i = 0; i < srgb.length; i++) srgb[i] = gammaCorrection(srgb[i]);
+		return to8bits(srgb);
+	}
+
+	// From http://en.wikipedia.org/wiki/SRGB#The_forward_transformation_.28CIE_xyY_or_CIE_XYZ_to_sRGB.29
+	private static double gammaCorrection(double d) { return d <= 0.0031308D? 12.92D*d : 1.055D*java.lang.Math.pow(d, 1D/2.4D) - 0.055D; }
+
+	private static int[] to8bits(double[] rgb) { return new int[] { to8Bits(rgb[0]), to8Bits(rgb[1]), to8Bits(rgb[2]) }; }
+
+	private static int to8Bits(double n) { return (int) java.lang.Math.round((n < 0? 0 : n > 1? 1 : n)*255D); }
 
 	/*
 	 * Matrix operations

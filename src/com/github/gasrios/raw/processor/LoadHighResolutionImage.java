@@ -16,6 +16,7 @@ import java.nio.ByteOrder;
 
 import com.github.gasrios.raw.data.ImageFileDirectory;
 import com.github.gasrios.raw.data.Tag;
+import com.github.gasrios.raw.io.TiffInputStream;
 import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.lang.RATIONAL;
 import com.github.gasrios.raw.lang.SRATIONAL;
@@ -71,7 +72,10 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
 	@Override public void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
 
+		// 3
 		samplesPerPixel = ((int)  ifd.get(Tag.SamplesPerPixel));
+
+		// 16 16 16
 		bitsPerSample	= (int[]) ifd.get(Tag.BitsPerSample);
 
 		// FIXME TIFF property is LONG, but java arrays have their size defined as int.
@@ -104,10 +108,7 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 			strip = ifd.getStripAsShortArray(i);
 			for (int j = 0; pixelSize*j < strip.length; j = j + 1)
 				image[j%width][j/width + i*rowsPerStrip] =
-					Math.multiply(
-						cameraToXYZ_D50,
-						readPixel(strip, j*pixelSize, ifd.getByteOrder())
-					);
+					Math.multiply(cameraToXYZ_D50, readPixel(strip, j*pixelSize, ifd.getByteOrder()));
 		}
 
 		// Convert image to LSH (see main comment in com.github.gasrios.raw.lang.Math)
@@ -132,11 +133,11 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 			} else if (bitsPerSample[i] <= 16) {
 				short[] sample = new short[2];
 				System.arraycopy(strip, offset, sample, 0, 2);
-				pixel[i] = com.github.gasrios.raw.io.TiffInputStream.toInt(sample, byteOrder)/65535D;
+				pixel[i] = TiffInputStream.toInt(sample, byteOrder)/65535D;
 			} else if (bitsPerSample[i] <= 32) {
 				short[] sample = new short[4];
 				System.arraycopy(strip, offset, sample, 0, 4);
-				pixel[i] = com.github.gasrios.raw.io.TiffInputStream.toLong(sample, byteOrder)/4294967295D;
+				pixel[i] = TiffInputStream.toLong(sample, byteOrder)/4294967295D;
 			}
 			offset += 1 + (bitsPerSample[i]-1)/8;
 		}
