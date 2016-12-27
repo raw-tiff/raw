@@ -45,7 +45,7 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 	protected double[][][] image;
 
 	private RATIONAL[]	analogBalance;
-	private RATIONAL[]	asShotNeutral;
+	double[]			cameraNeutral;
 	private int[]		bitsPerSample;;
 	private int			calibrationIlluminant1;
 	private int			calibrationIlluminant2;
@@ -58,8 +58,8 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 	private int			samplesPerPixel;
 
 	@Override public void firstIfd(ImageFileDirectory ifd) {
+
 		analogBalance		   = (RATIONAL[])  ifd.get(Tag.AnalogBalance);
-		asShotNeutral		   = (RATIONAL[])  ifd.get(Tag.AsShotNeutral);
 		calibrationIlluminant1 = (int)		   ifd.get(Tag.CalibrationIlluminant1);
 		calibrationIlluminant2 = (int)		   ifd.get(Tag.CalibrationIlluminant2);
 		cameraCalibration1	   = (SRATIONAL[]) ifd.get(Tag.CameraCalibration1);
@@ -68,14 +68,26 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 		colorMatrix2		   = (SRATIONAL[]) ifd.get(Tag.ColorMatrix2);
 		forwardMatrix1		   = (SRATIONAL[]) ifd.get(Tag.ForwardMatrix1);
 		forwardMatrix2		   = (SRATIONAL[]) ifd.get(Tag.ForwardMatrix2);
+
+		/*
+		 * See https://forums.adobe.com/message/9222350
+		 *
+		 * CameraNeutral in this sense is a transform of the AsShotWhiteXY. It would be same as AsShotNeutral if the camera
+		 * to XYZ matrix, etc used was the same, but otherwise not. So you should be able to do a "circular" transform, so
+		 * e.g., CameraNeutral to AsShotWhiteXY to CameraNeutral if you use the same matrix. But bear in mind that there's a
+		 * twist here. If for example a particular camera manufacturer specifies AsShotWhiteXY in their raw file, you don't
+		 * necessarily know the matrix that they used, so you can't exactly know that their CameraNeutral values were. You
+		 * only know the matrix that Adobe used, so your CameraNeutral as calculated may not be the same as what the camera
+		 * originally thought.
+		 */
+		cameraNeutral = RATIONAL.asDoubleArray((RATIONAL[])  ifd.get(Tag.AsShotNeutral));
+
 	}
 
 	@Override public void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
 
-		// 3
 		samplesPerPixel = ((int)  ifd.get(Tag.SamplesPerPixel));
 
-		// 16 16 16
 		bitsPerSample	= (int[]) ifd.get(Tag.BitsPerSample);
 
 		// FIXME TIFF property is LONG, but java arrays have their size defined as int.
@@ -91,7 +103,7 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
 		double[][] cameraToXYZ_D50 = Math.cameraToXYZ_D50(
 			analogBalance,
-			asShotNeutral,
+			cameraNeutral,
 			calibrationIlluminant1,
 			calibrationIlluminant2,
 			cameraCalibration1,
@@ -102,20 +114,39 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 			forwardMatrix2
 		);
 
+		for (int i = 0; i < cameraToXYZ_D50.length; i++) {
+			for (int j = 0; j < cameraToXYZ_D50[i].length; j++) System.out.print(cameraToXYZ_D50[i][j] + "\t");
+			System.out.println();
+		}
+
 		// See TIFF 6.0 Specification, page 39
 		for (int i = 0; i < (int) ((length + rowsPerStrip - 1) / rowsPerStrip); i++) {
 			short[] strip;
 			strip = ifd.getStripAsShortArray(i);
-			for (int j = 0; pixelSize*j < strip.length; j = j + 1)
-				image[j%width][j/width + i*rowsPerStrip] =
-					Math.multiply(cameraToXYZ_D50, readPixel(strip, j*pixelSize, ifd.getByteOrder()));
+			for (int j = 0; pixelSize*j < strip.length; j = j + 1) {
+
+				/*
+				 * See https://forums.adobe.com/message/9222350: "That's an inherent problem of Bayer sensor cameras. The
+				 * sensitivities of the various channels are such that one channel will always saturate before others."
+				 *
+				 * Crop before converting to CIE 1931 XYZ, otherwise only god knows what might happen to hue.
+				 *
+				 * FIXME It is theoretically possible to recover enough information from the overexposed pixel to adjust
+				 * brightness preserving the whole range, without cropping.
+				 */
+				double[] pixel = readPixel(strip, j*pixelSize, ifd.getByteOrder());
+				for (int k = 0; k < pixel.length; k++) if (pixel[k] > cameraNeutral[k]) pixel[k] = cameraNeutral[k];
+
+				image[j%width][j/width + i*rowsPerStrip] = Math.multiply(cameraToXYZ_D50, pixel);
+
+			}
 		}
 
 		// Convert image to LSH (see main comment in com.github.gasrios.raw.lang.Math)
-		/*for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++) {
+		for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++) {
 			double[] xyz = image[i][j];
 			image[i][j] = Math.luv2lsh(Math.xyz2luv(xyz));
-		}*/
+		}
 
 	}
 

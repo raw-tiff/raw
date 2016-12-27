@@ -49,7 +49,7 @@ import com.github.gasrios.raw.data.Illuminant;
 public final class Math {
 
 	/*
-	 * Image editing methods.
+	 * Image editing methods. Color space is assumed to be LSH.
 	 */
 
 	// Convert to B&W by desaturating image.
@@ -66,60 +66,11 @@ public final class Math {
 
 	/*
 	 * Color space conversions.
-	 *
-	 * FIXME Need to correct rounding mistakes?
-	 * FIXME luv2lsh(xyz2luv(XYZ)) should be replaced with xyz2lsh(XYZ)
-	 * FIXME lsh2luv(luv2xyz(LSH)) should be replaced with lsh2xyz(LSH)
 	 */
 
-	static private final double
-
-		// u,v coordinates for D50 reference white. See ftp://law.resource.org/pub/us/cfr/ibr/003/cie.15.2004.tables.xls
-		un = .209159684D,
-		vn = .488082649D,
-
-		// See http://www.brucelindbloom.com/index.html?LContinuity.html
-		ε = 216D/24389D,
-		κ = 24389D/27D,
-		invκ = 27D/24389D;
-
-	// http://en.wikipedia.org/wiki/CIELUV#The_forward_transformation
-	public static double[] xyz2luv(double[] xyz) {
-
-		double d = xyz[0]+15D*xyz[1]+3D*xyz[2];
-
-		if (d == 0D) return new double[] { 0D, 0D, 0D };
-
-		double L = xyz[1] > ε? 116D*java.lang.Math.pow(xyz[1], 1D/3D)-16D : κ*xyz[1];
-		return new double[] { L, 13D*L*((4D*xyz[0]/d)-un), 13D*L*((9D*xyz[1]/d)-vn) };
-
-	}
-
-	// See http://en.wikipedia.org/wiki/CIELUV#The_reverse_transformation
-	public static double[] luv2xyz(double[] luv) {
-
-		if (luv[0] == 0D) return new double[] { 0D, 0D, 0D };
-
-		double u = luv[1]/(13D*luv[0])+un;
-		double v = luv[2]/(13D*luv[0])+vn;
-		double Y = luv[0] > 8D? java.lang.Math.pow((luv[0]+16D)/116D, 3D) : luv[0]*invκ;
-
-		return new double[] { Y*(9D*u)/(4D*v), Y, Y*(12D-3D*u-20D*v)/(4D*v) };
-
-	}
-
-	// See http://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation
-	public static double[] luv2lsh(double[] luv) {
-		return (luv[0] == 0D)?
-			new double[] { 0D, 0D, 0D }:
-			new double[] { luv[0], java.lang.Math.pow(java.lang.Math.pow(luv[1], 2) + java.lang.Math.pow(luv[2], 2), .5D)/luv[0], java.lang.Math.atan2(luv[2], luv[1]) };
-	}
-
-	public static double[] lsh2luv(double[] lsh) {
-		return new double[] { lsh[0], lsh[0]*lsh[1]*java.lang.Math.cos(lsh[2]), lsh[0]*lsh[1]*java.lang.Math.sin(lsh[2]) };
-	}
-
 	/*
+	 * 1. Camera to CIE 1931 XYZ
+	 *
 	 * See Digital Negative Specification Version 1.4.0.0, page 82.
 	 *
 	 * ReferenceNeutral = Inverse(AB * CC) * CameraNeutral
@@ -147,24 +98,17 @@ public final class Math {
 	 * ForwardMatrix1 defines a matrix that maps white balanced camera colors to XYZ D50 colors.
 	 */
 	public static double[][] cameraToXYZ_D50(
-		RATIONAL [] analogBalance,
-		RATIONAL [] asShotNeutral,
-		int			calibrationIlluminant1,
-		int			calibrationIlluminant2,
-		SRATIONAL[] cameraCalibration1,
-		SRATIONAL[] cameraCalibration2,
-		SRATIONAL[] colorMatrix1,
-		SRATIONAL[] colorMatrix2,
-		SRATIONAL[] forwardMatrix1,
-		SRATIONAL[] forwardMatrix2
+			RATIONAL [] analogBalance,
+			double   [] cameraNeutral,
+			int			calibrationIlluminant1,
+			int			calibrationIlluminant2,
+			SRATIONAL[] cameraCalibration1,
+			SRATIONAL[] cameraCalibration2,
+			SRATIONAL[] colorMatrix1,
+			SRATIONAL[] colorMatrix2,
+			SRATIONAL[] forwardMatrix1,
+			SRATIONAL[] forwardMatrix2
 	) {
-
-		/*
-		 * See Digital Negative Specification Version 1.4.0.0, page 79
-		 *
-		 * Chapter 6 makes reference to "cameraNeutral", but the tag name is "asShotNeutral".
-		 */
-		double[] cameraNeutral = RATIONAL.asDoubleArray(asShotNeutral);
 
 		double weight =
 			interpolationWeightingFactor(
@@ -201,7 +145,7 @@ public final class Math {
 					Math.inverse(Math.asDiagonalMatrix(Math.multiply(invABxCC, cameraNeutral)))
 				),
 				invABxCC
-			);
+		);
 
 	}
 
@@ -237,11 +181,15 @@ public final class Math {
 		SRATIONAL[] colorMatrix2
 	) {
 
-		double previousWeight;
 		// This is just an initial guess. Any value will do.
-		double weight = .5D;
+		double previousWeight, weight = .5D;
+
+		// Sometimes, due to precision issues, weight does not converge, so we have to limit the number  of iterations.
+		int count = 0;
 
 		do {
+			count++;
+			System.out.println(weight);
 			previousWeight = weight;
 			weight =
 				interpolationWeightingFactor(
@@ -256,9 +204,10 @@ public final class Math {
 					calibrationIlluminant1,
 					calibrationIlluminant2
 				);
-		} while (previousWeight!= weight);
+		} while (previousWeight != weight && count < 20);
 
-		return weight;
+		// When previousWeight and weight do not converge, we get stuck between two oscillating values. Return their average.
+		return previousWeight == weight? weight : (previousWeight+weight)/2D;
 
 	}
 
@@ -357,28 +306,78 @@ public final class Math {
 	}
 
 	/*
+	 * 2. CIE 1931 XYZ <-> CIE 1976 (L*, u*, v*)
+	 */
+
+	static private final double
+
+	// u,v coordinates for D50 reference white. See ftp://law.resource.org/pub/us/cfr/ibr/003/cie.15.2004.tables.xls
+	un = .209159684D,
+	vn = .488082649D,
+
+	// See http://www.brucelindbloom.com/index.html?LContinuity.html
+	ε = 216D/24389D,
+	κ = 24389D/27D,
+	invκ = 27D/24389D;
+
+	// http://en.wikipedia.org/wiki/CIELUV#The_forward_transformation
+	public static double[] xyz2luv(double[] xyz) {
+		double d = xyz[0]+15D*xyz[1]+3D*xyz[2];
+		if (d == 0D) return new double[] { 0D, 0D, 0D };
+		double L = xyz[1] > ε? 116D*java.lang.Math.pow(xyz[1], 1D/3D)-16D : κ*xyz[1];
+		return new double[] { L, 13D*L*((4D*xyz[0]/d)-un), 13D*L*((9D*xyz[1]/d)-vn) };
+	}
+
+	// See http://en.wikipedia.org/wiki/CIELUV#The_reverse_transformation
+	public static double[] luv2xyz(double[] luv) {
+		if (luv[0] == 0D) return new double[] { 0D, 0D, 0D };
+		double u = luv[1]/(13D*luv[0])+un;
+		double v = luv[2]/(13D*luv[0])+vn;
+		double Y = luv[0] > 8D? java.lang.Math.pow((luv[0]+16D)/116D, 3D) : luv[0]*invκ;
+		return new double[] { Y*(9D*u)/(4D*v), Y, Y*(12D-3D*u-20D*v)/(4D*v) };
+	}
+
+	/*
+	 * 3. CIE 1976 (L*, u*, v*) <-> LSH (LChuv, with chroma C replaced with saturation S = C/L)
+	 */
+
+	// See http://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation
+	public static double[] luv2lsh(double[] luv) {
+		return (luv[0] == 0D)?
+			new double[] { 0D, 0D, 0D }:
+			new double[] {
+				luv[0],
+				java.lang.Math.pow(java.lang.Math.pow(luv[1], 2) + java.lang.Math.pow(luv[2], 2), .5D)/luv[0],
+				java.lang.Math.atan2(luv[2], luv[1])
+			};
+	}
+
+	public static double[] lsh2luv(double[] lsh) {
+		return new double[] {
+			lsh[0],
+			lsh[0]*lsh[1]*java.lang.Math.cos(lsh[2]),
+			lsh[0]*lsh[1]*java.lang.Math.sin(lsh[2])
+		};
+	}
+
+	/*
+	 * 4. CIE 1931 XYZ <-> sRGB
+	 */
+
+	/*
 	 * From http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
 	 *
 	 * This matrix accounts for the illuminant D50, while IEC 61966-2-1:1999 (sRGB spec) uses D65.
+	 */
 	public static final double[][] XYZ_D50ToSRGB = new double[][] {
 		new double[] {  3.1338561D, -1.6168667D, -0.4906146D },
 		new double[] { -0.9787684D,  1.9161415D,  0.0334540D },
 		new double[] {  0.0719453D, -0.2289914D,  1.4052427D }
 	};
-	 */
-
-	/*
-	 * Illuminant D65.
-	 */
-	public static final double[][] XYZ_D50ToSRGB = new double[][] {
-		new double[] {  3.2404542D, -1.5371385D, -0.4985314D },
-		new double[] { -0.9692660D,  1.8760108D,  0.0415560D },
-		new double[] {  0.0556434D, -0.2040259D,  1.0572252D }
-	};
 
 	public static int[] xyzToSRGB(double[] pixel) {
-		double[] srgb = Math.multiply(XYZ_D50ToSRGB, pixel);
-		//double[] srgb = Math.multiply(XYZ_D50ToSRGB, Math.luv2xyz(Math.lsh2luv(pixel)));
+		//double[] srgb = Math.multiply(XYZ_D50ToSRGB, pixel);
+		double[] srgb = Math.multiply(XYZ_D50ToSRGB, Math.luv2xyz(Math.lsh2luv(pixel)));
 		for (int i = 0; i < srgb.length; i++) srgb[i] = gammaCorrection(srgb[i]);
 		return to8bits(srgb);
 	}
@@ -400,14 +399,14 @@ public final class Math {
 		return m2;
 	}
 
-	public static double[][] multiply(double[][] m1, double[][] m2) {
+	private static double[][] multiply(double[][] m1, double[][] m2) {
 		double[][] m3 = new double[m1.length][m2[0].length];
 		for (int i = 0; i < m3.length; i++) for (int j = 0; j < m3[0].length; j++) for (int k = 0; k < m2.length; k++)
 			m3[i][j] += m1[i][k]* m2[k][j];
 		return m3;
 	}
 
-	public static double[][] weightedAverage(double[][] matrix1, double[][] matrix2, double weight) {
+	private static double[][] weightedAverage(double[][] matrix1, double[][] matrix2, double weight) {
 		double[][] buffer = new double[matrix1.length][matrix1[0].length];
 		weight = weight < 0? 0 : weight > 1? 1 : weight;
 		for (int i = 0; i < matrix1.length; i++) for (int j = 0; j < matrix1[0].length; j++)
@@ -415,14 +414,14 @@ public final class Math {
 		return buffer;
 	}
 
-	public static double[][] asDiagonalMatrix(double[] vector) {
+	private static double[][] asDiagonalMatrix(double[] vector) {
 		double[][] buffer = new double[vector.length][vector.length];
 		for (int i = 0; i < vector.length; i++) buffer[i][i] = vector[i];
 		return buffer;
 	}
 
 	// TODO samplesPerPixel != 3
-	public static double[][] vector2Matrix(double[] vector) {
+	private static double[][] vector2Matrix(double[] vector) {
 		double[][] buffer = null;
 		if (vector != null) {
 			buffer = new double[3][3];
@@ -431,7 +430,7 @@ public final class Math {
 		return buffer;
 	}
 
-	public static double[][] inverse(double[][] m) {
+	private static double[][] inverse(double[][] m) {
 		double[][] buffer = new double[m.length][m[0].length];
 		double determinant = determinant(m);
 		for (int i = 0; i < m.length; i++) for (int j = 0; j < m.length; j++) buffer[i][j] = cofactor(j, i, m)/determinant;
