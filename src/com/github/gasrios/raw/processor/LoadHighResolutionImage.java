@@ -114,11 +114,6 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 			forwardMatrix2
 		);
 
-		for (int i = 0; i < cameraToXYZ_D50.length; i++) {
-			for (int j = 0; j < cameraToXYZ_D50[i].length; j++) System.out.print(cameraToXYZ_D50[i][j] + "\t");
-			System.out.println();
-		}
-
 		// See TIFF 6.0 Specification, page 39
 		for (int i = 0; i < (int) ((length + rowsPerStrip - 1) / rowsPerStrip); i++) {
 			short[] strip;

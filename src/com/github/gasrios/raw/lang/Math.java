@@ -189,7 +189,6 @@ public final class Math {
 
 		do {
 			count++;
-			System.out.println(weight);
 			previousWeight = weight;
 			weight =
 				interpolationWeightingFactor(
