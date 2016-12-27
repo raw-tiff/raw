@@ -25,15 +25,15 @@ import com.github.gasrios.raw.io.TiffInputStream;
 import com.github.gasrios.raw.lang.TiffProcessorException;
 
 /*
- * This class bridges the gap between (1) reading a DNG file and making its information available in an easy to use fashion and
- * (2) writing code that actually processes this information.
+ * This class bridges the gap between (1) reading a TIFF file and making its information available in an easy to use fashion
+ * and (2) writing code that actually processes this information.
  *
- * The first half of the job is done by classes org.yoyo.dng.data.ImageFileDirectoryLoader and org.yoyo.dng.io.DngInputStream,
- * while the second by classes implementing interface org.yoyo.dng.processor.DngProcessor or extending the convenience class
- * org.yoyo.dng.processor.AbstractDngProcessor which provides empty implementations of all methods defined in the former.
+ * The first half of the job is done by classes ImageFileDirectoryLoader and TiffInputStream, while the second by classes
+ * implementing interface TiffProcessor or extending the convenience class AbstractTiffProcessor, which provides empty
+ * implementations of all methods defined in the former.
  *
- * DngProcessorEngine creates an ImageFileDirectory then sweeps across all of its contents, invoking matching methods in
- * DngProcessor. So by implementing your DngProcessor you can focus on processing the parts of the file you care about
+ * TiffProcessorEngine creates an ImageFileDirectory then sweeps across all of its contents, invoking matching methods in
+ * TiffProcessor. So by implementing your TiffProcessor you can focus on processing the parts of the file you care about
  * while ignoring everything else.
  */
 
