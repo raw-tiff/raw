@@ -107,8 +107,7 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 		int width		= (int) (long) ifd.get(Tag.ImageWidth);
 		int length		= (int) (long) ifd.get(Tag.ImageLength);
 
-		//image = new double[width][length][0];
-		image = new double[length][width][0];
+		image = new double[width][length][0];
 
 		int pixelSize = 0;
 		for (int i = 0; i < samplesPerPixel; i++) pixelSize += 1 + (bitsPerSample[i]-1)/8;
@@ -119,8 +118,7 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 		for (int i = 0; i < (int) ((length + rowsPerStrip - 1) / rowsPerStrip); i++) {
 			short[] strip = ifd.getStripAsShortArray(i);
 			for (int j = 0; pixelSize*j < strip.length; j = j + 1)
-				//image[j%width][j/width + i*rowsPerStrip] =
-				image[length - j/width + i*rowsPerStrip][width - j%width] =
+				image[j%width][j/width + i*rowsPerStrip] =
 					camera2lsh(strip, j*pixelSize, ifd.getByteOrder());
 		}
 
