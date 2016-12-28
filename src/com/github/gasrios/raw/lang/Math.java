@@ -242,7 +242,7 @@ public final class Math {
 		return -449D*java.lang.Math.pow(n, 3D) + 3525D*java.lang.Math.pow(n, 2D) - 6823.3D*n + 5520.33D;
 	}
 
-	private static double normalize(double b, double m, double t) { return m < b? 0 : m > t? 1 : (m-b)/(t-b); }
+	public static double normalize(double b, double m, double t) { return m < b? 0 : m > t? 1 : (m-b)/(t-b); }
 
 	/*
 	 * See Digital Negative Specification Version 1.4.0.0, page 79.

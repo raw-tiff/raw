@@ -43,19 +43,20 @@ import com.github.gasrios.raw.lang.TiffProcessorException;
 public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
 	protected double[][][] image;
+	protected double[][]   cameraToXYZ_D50;
+	protected double[]	   cameraNeutral;
 
-	private RATIONAL[]	analogBalance;
-	double[]			cameraNeutral;
-	private int[]		bitsPerSample;;
-	private int			calibrationIlluminant1;
-	private int			calibrationIlluminant2;
-	private SRATIONAL[] cameraCalibration1;
-	private SRATIONAL[] cameraCalibration2;
-	private SRATIONAL[] colorMatrix1;
-	private SRATIONAL[] colorMatrix2;
-	private SRATIONAL[] forwardMatrix1;
-	private SRATIONAL[] forwardMatrix2;
-	private int			samplesPerPixel;
+	private   RATIONAL[]   analogBalance;
+	private   int[]		   bitsPerSample;;
+	private   int		   calibrationIlluminant1;
+	private   int		   calibrationIlluminant2;
+	private   SRATIONAL[]  cameraCalibration1;
+	private   SRATIONAL[]  cameraCalibration2;
+	private   SRATIONAL[]  colorMatrix1;
+	private   SRATIONAL[]  colorMatrix2;
+	private   SRATIONAL[]  forwardMatrix1;
+	private   SRATIONAL[]  forwardMatrix2;
+	private   int		   samplesPerPixel;
 
 	@Override public void firstIfd(ImageFileDirectory ifd) {
 
@@ -84,92 +85,85 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
 	}
 
-	@Override public void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
+	@Override public final void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
 
-		samplesPerPixel = ((int)  ifd.get(Tag.SamplesPerPixel));
+		samplesPerPixel = ((int)	   ifd.get(Tag.SamplesPerPixel));
+		bitsPerSample	= (int[])	   ifd.get(Tag.BitsPerSample);
 
-		bitsPerSample	= (int[]) ifd.get(Tag.BitsPerSample);
+		cameraToXYZ_D50 = Math.cameraToXYZ_D50(
+				analogBalance,
+				cameraNeutral,
+				calibrationIlluminant1,
+				calibrationIlluminant2,
+				cameraCalibration1,
+				cameraCalibration2,
+				colorMatrix1,
+				colorMatrix2,
+				forwardMatrix1,
+				forwardMatrix2
+			);
 
 		// FIXME TIFF property is LONG, but java arrays have their size defined as int.
-		int width   = (int) (long) ifd.get(Tag.ImageWidth);
-		int length  = (int) (long) ifd.get(Tag.ImageLength);
+		int width		= (int) (long) ifd.get(Tag.ImageWidth);
+		int length		= (int) (long) ifd.get(Tag.ImageLength);
 
-		image = new double[width][length][0];
+		//image = new double[width][length][0];
+		image = new double[length][width][0];
 
 		int pixelSize = 0;
 		for (int i = 0; i < samplesPerPixel; i++) pixelSize += 1 + (bitsPerSample[i]-1)/8;
 
 		int rowsPerStrip = (int) (long) ifd.get(Tag.RowsPerStrip);
 
-		double[][] cameraToXYZ_D50 = Math.cameraToXYZ_D50(
-			analogBalance,
-			cameraNeutral,
-			calibrationIlluminant1,
-			calibrationIlluminant2,
-			cameraCalibration1,
-			cameraCalibration2,
-			colorMatrix1,
-			colorMatrix2,
-			forwardMatrix1,
-			forwardMatrix2
-		);
-
 		// See TIFF 6.0 Specification, page 39
 		for (int i = 0; i < (int) ((length + rowsPerStrip - 1) / rowsPerStrip); i++) {
-			short[] strip;
-			strip = ifd.getStripAsShortArray(i);
-			for (int j = 0; pixelSize*j < strip.length; j = j + 1) {
-
-				/*
-				 * See https://forums.adobe.com/message/9222350: "That's an inherent problem of Bayer sensor cameras. The
-				 * sensitivities of the various channels are such that one channel will always saturate before others."
-				 *
-				 * Crop before converting to CIE 1931 XYZ, otherwise only god knows what might happen to hue.
-				 *
-				 * FIXME It is theoretically possible to recover enough information from the overexposed pixel to adjust
-				 * brightness preserving the whole range, without cropping.
-				 */
-				double[] pixel = readPixel(strip, j*pixelSize, ifd.getByteOrder());
-				for (int k = 0; k < pixel.length; k++) if (pixel[k] > cameraNeutral[k]) pixel[k] = cameraNeutral[k];
-
-				image[j%width][j/width + i*rowsPerStrip] = Math.multiply(cameraToXYZ_D50, pixel);
-
-			}
-		}
-
-		// Convert image to LSH (see main comment in com.github.gasrios.raw.lang.Math)
-		for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++) {
-			double[] xyz = image[i][j];
-			image[i][j] = Math.luv2lsh(Math.xyz2luv(xyz));
+			short[] strip = ifd.getStripAsShortArray(i);
+			for (int j = 0; pixelSize*j < strip.length; j = j + 1)
+				//image[j%width][j/width + i*rowsPerStrip] =
+				image[length - j/width + i*rowsPerStrip][width - j%width] =
+					camera2lsh(strip, j*pixelSize, ifd.getByteOrder());
 		}
 
 	}
 
-	// TODO Assuming in the conversion pixel data is always unsigned. Double check this.
+	protected double[] camera2lsh(short[] strip, int offset, ByteOrder byteOrder) {
+
+		double[] sensorLevels = readSensorLevels(strip, offset, byteOrder);
+
+		/*
+		 * Crop before converting to CIE 1931 XYZ, otherwise only god knows what might happen to hue.
+		 *
+		 * See https://forums.adobe.com/message/9222350
+		 *
+		 * That's an inherent problem of Bayer sensor cameras. The sensitivities of the various channels are such
+		 * that one channel will always saturate before others.
+		 */
+		for (int k = 0; k < sensorLevels.length; k++) if (sensorLevels[k] > cameraNeutral[k]) sensorLevels[k] = cameraNeutral[k];
+
+		return Math.luv2lsh(Math.xyz2luv(Math.multiply(cameraToXYZ_D50, sensorLevels)));
+
+	}
+
 	// TODO Divide by WhiteLevel, not constant.
-	private double[] readPixel(short[] strip, int offset, ByteOrder byteOrder) {
-
-		double[] pixel = new double[samplesPerPixel];
-
+	protected final double[] readSensorLevels(short[] strip, int offset, ByteOrder byteOrder) {
+		double[] sensorLevels = new double[samplesPerPixel];
 		for (int i = 0; i < samplesPerPixel; i++) {
 			if (bitsPerSample[i] <= 8) {
 				short[] sample = new short[1];
 				System.arraycopy(strip, offset, sample, 0, 1);
-				pixel[i] = sample[0]/255D;
+				sensorLevels[i] = sample[0]/255D;
 			} else if (bitsPerSample[i] <= 16) {
 				short[] sample = new short[2];
 				System.arraycopy(strip, offset, sample, 0, 2);
-				pixel[i] = TiffInputStream.toInt(sample, byteOrder)/65535D;
+				sensorLevels[i] = TiffInputStream.toInt(sample, byteOrder)/65535D;
 			} else if (bitsPerSample[i] <= 32) {
 				short[] sample = new short[4];
 				System.arraycopy(strip, offset, sample, 0, 4);
-				pixel[i] = TiffInputStream.toLong(sample, byteOrder)/4294967295D;
+				sensorLevels[i] = TiffInputStream.toLong(sample, byteOrder)/4294967295D;
 			}
 			offset += 1 + (bitsPerSample[i]-1)/8;
 		}
-
-		return pixel;
-
+		return sensorLevels;
 	}
 
 }
