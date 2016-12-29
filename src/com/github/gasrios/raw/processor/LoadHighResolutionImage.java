@@ -129,12 +129,8 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 		double[] sensorLevels = readSensorLevels(strip, offset, byteOrder);
 
 		/*
-		 * Crop before converting to CIE 1931 XYZ, otherwise only god knows what might happen to hue.
-		 *
-		 * See https://forums.adobe.com/message/9222350
-		 *
-		 * That's an inherent problem of Bayer sensor cameras. The sensitivities of the various channels are such
-		 * that one channel will always saturate before others.
+		 * Saturation is reached when sensor level exceeds its analog cameraNeutral channel, not its own physical saturation
+		 * limit, otherwise it's up to the transformation matrix whether hues will be preserved when sensorLevels > cameraNeutral.
 		 */
 		for (int k = 0; k < sensorLevels.length; k++) if (sensorLevels[k] > cameraNeutral[k]) sensorLevels[k] = cameraNeutral[k];
 

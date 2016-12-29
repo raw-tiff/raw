@@ -366,7 +366,7 @@ public final class Math {
 	/*
 	 * From http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
 	 *
-	 * This matrix accounts for the illuminant D50, while IEC 61966-2-1:1999 (sRGB spec) uses D65.
+	 * This matrix accounts for the illuminant D50, while IEC 61966-2-1:1999 uses D65.
 	 */
 	public static final double[][] XYZ_D50ToSRGB = new double[][] {
 		new double[] {  3.1338561D, -1.6168667D, -0.4906146D },
@@ -374,15 +374,18 @@ public final class Math {
 		new double[] {  0.0719453D, -0.2289914D,  1.4052427D }
 	};
 
-	public static int[] xyzToSRGB(double[] pixel) {
-		//double[] srgb = Math.multiply(XYZ_D50ToSRGB, pixel);
-		double[] srgb = Math.multiply(XYZ_D50ToSRGB, Math.luv2xyz(Math.lsh2luv(pixel)));
-		for (int i = 0; i < srgb.length; i++) srgb[i] = gammaCorrection(srgb[i]);
-		return to8bits(srgb);
+	public static int[] lsh2sRGB(double[] pixel) {
+		return to8bits(gammaCorrection(Math.multiply(XYZ_D50ToSRGB, Math.luv2xyz(Math.lsh2luv(pixel)))));
+	}
+
+	private static double[] gammaCorrection(double[] d) {
+		return new double[] { gammaCorrection(d[0]), gammaCorrection(d[1]), gammaCorrection(d[2]) };
 	}
 
 	// From http://en.wikipedia.org/wiki/SRGB#The_forward_transformation_.28CIE_xyY_or_CIE_XYZ_to_sRGB.29
-	private static double gammaCorrection(double d) { return d <= 0.0031308D? 12.92D*d : 1.055D*java.lang.Math.pow(d, 1D/2.4D) - 0.055D; }
+	private static double gammaCorrection(double d) {
+		return d <= 0.0031308D? 12.92D*d : 1.055D*java.lang.Math.pow(d, 1D/2.4D) - 0.055D;
+	}
 
 	private static int[] to8bits(double[] rgb) { return new int[] { to8Bits(rgb[0]), to8Bits(rgb[1]), to8Bits(rgb[2]) }; }
 
