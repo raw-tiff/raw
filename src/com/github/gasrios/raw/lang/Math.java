@@ -49,6 +49,30 @@ import com.github.gasrios.raw.data.Illuminant;
 public final class Math {
 
 	/*
+	 * Image info that might be useful when editing.
+	 */
+
+	public static double min(double[][][] image, int dimension) {
+		double buffer = Double.MAX_VALUE;
+		for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++)
+			if (buffer > image[i][j][dimension]) buffer = image[i][j][dimension];
+		return buffer;
+	}
+
+	public static double median(double[][][] image, int dimension) {
+		double buffer = 0D;
+		for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++) buffer += image[i][j][dimension];
+		return buffer / (image.length*image[0].length);
+	}
+
+	public static double max(double[][][] image, int dimension) {
+		double buffer = Double.MIN_VALUE;
+		for (int i = 0; i < image.length; i++) for (int j = 0; j < image[0].length; j ++)
+			if (buffer < image[i][j][dimension]) buffer = image[i][j][dimension];
+		return buffer;
+	}
+
+	/*
 	 * Image editing methods. Color space is assumed to be LSH.
 	 */
 
