@@ -2,7 +2,7 @@
 
 This is not a production ready raw reader, just a personal project I started while studying digital image processing. If you need a complete, fully functional library, check dcraw out: https://www.cybercom.net/~dcoffin/dcraw/
 
-Currently the only format supported is uncompressed, linear (demosaiced) Adobe DNG. Reading Canon's .CR2 metadata is also supported, but should not be considered 100% reliable yet.
+Currently the only format supported is uncompressed, linear (demosaiced) Adobe DNG. Reading TIFF metadata is also supported.
 
 I decided to support DNG first because, unlike proprietary formats such as Canon's CR2 or Nikon's .NEF, DNG is open and has its specification publicly available. Also, virtually all widely used raw formats are TIFF-based, like DNG, so if you can read it, you are more than halfway done reading any raw file format.
 
@@ -28,6 +28,14 @@ Keep in mind TIFF is a decades old file format that has been receiving extension
 - TIFF Technical Note 1: TIFF Trees
 - ISO 12234-2:2001, Electronic still-picture imaging – Removable memory – Part 2: TIFF/EP image data format
 - Digital Negative Specification Version 1.4.0.0
+
+** A note on color space **
+
+The internal color space used is a variant of LChuv, the cylindrical representation of CIE 1976 (L*, u*, v*), with chroma replaced with saturation (C/L).
+
+This color space has the advantage of providing mathematical definitions of "luminance", "saturation" and "hue" good enough to make transformations in these dimensions linear independent (that is, changes in luminance will not affect neither saturation nor hue, for example, at least as far as human perception is concerned). This is really helpful for photo editing.
+
+See comments on class com.github.gasrios.raw.lang.Math for more information.
 
 ** Examples **
 
