@@ -101,7 +101,8 @@ public class TiffInputStream extends BufferedInputStream {
 		 * We always mark the file beginning before reading or skipping bytes, so we can always move back to the initial
 		 * position and move around the file using its absolute offsets.
 		 *
-		 * TODO due to the readlimit constraint we cannot read over 2GB of data at once.
+		 * Due to the readlimit constraint we cannot read over 2³¹-1 bytes (2GB) of data at once, as it will invalidate the
+		 * mark position.
 		 */
 		super.mark(Integer.MAX_VALUE);
 
@@ -130,9 +131,8 @@ public class TiffInputStream extends BufferedInputStream {
 	 * Found out empirically that trying to skip over 8KiB at once does not work. This implementation fixes this problem.
 	 */
 	@Override public synchronized long skip(long n) throws IOException {
-		long skipped = 0;
-		// TODO stop if trying to read beyond EOF (only happens if file is corrupted, but should fail gracefully)
-		while (skipped < n) skipped = super.skip(n = n - skipped);
+		long skipped = 0, buffer = n;
+		while (skipped < buffer) skipped = super.skip(buffer -= skipped);
 		currentPosition += n;
 		return n;
 	}
@@ -141,7 +141,6 @@ public class TiffInputStream extends BufferedInputStream {
 
 	public synchronized void mark() { mark(0); }
 
-	// readlimit is ignored.
 	@Override public synchronized void mark(int readlimit) { mark = currentPosition; }
 
 	@Override public synchronized void reset() throws IOException { seek(mark); }
@@ -158,7 +157,8 @@ public class TiffInputStream extends BufferedInputStream {
 		 * We always mark the file beginning before reading or skipping bytes, so we can always move back to the initial
 		 * position and move around the file using its absolute offsets.
 		 *
-		 * TODO due to the readlimit constraint we cannot read over 2GB of data at once.
+		 * Due to the readlimit constraint we cannot read over 2³¹-1 bytes (2GB) of data at once, as it will invalidate the
+		 * mark position.
 		 */
 		super.mark(Integer.MAX_VALUE);
 
@@ -215,7 +215,9 @@ public class TiffInputStream extends BufferedInputStream {
 	 * Methods that read numeric types
 	 */
 
-	// TIFF's SSHORT type, a 2-byte signed integer, can be read as Java's 2-byte short.
+	/*
+	 * TIFF's SSHORT type, a 2-byte signed integer, can be read as Java's 2-byte short.
+	 */
 	public synchronized short readSSHORT() throws IOException {
 		short[] buffer = new short[2];
 		if (read(buffer) != 2) throw new EOFException();
@@ -234,7 +236,6 @@ public class TiffInputStream extends BufferedInputStream {
 			(buffer[0] << 24) + (buffer[1] << 16) + (buffer[2] << 8) + buffer[3];
 	}
 
-	// TODO: get rid of ByteBuffer.
 	public synchronized float readFLOAT() throws IOException {
 		byte[] buffer = new byte[4];
 		if (read(buffer) != 4) throw new EOFException();
@@ -244,7 +245,6 @@ public class TiffInputStream extends BufferedInputStream {
 		return byteBuffer.getFloat();
 	}
 
-	// TODO: get rid of ByteBuffer.
 	public synchronized double readDOUBLE() throws IOException {
 		byte[] buffer = new byte[8];
 		if (read(buffer) != 8) throw new EOFException();
@@ -254,14 +254,18 @@ public class TiffInputStream extends BufferedInputStream {
 		return byteBuffer.getDouble();
 	}
 
-	// TIFF's SHORT type, a 2-byte unsigned integer, must be read as a 4-byte int in order to preserve sign.
+	/*
+	 * TIFF's SHORT type, a 2-byte unsigned integer, must be read as a 4-byte int in order to preserve sign.
+	 */
 	public synchronized int readSHORT() throws IOException {
 		short[] buffer = new short[2];
 		if (read(buffer) != 2) throw new EOFException();
 		return toInt(buffer, byteOrder);
 	}
 
-	// TIFF's LONG type, a 4-byte unsigned integer, must be read as a 8-byte long in order to preserve sign.
+	/*
+	 * TIFF's LONG type, a 4-byte unsigned integer, must be read as a 8-byte long in order to preserve sign.
+	 */
 	public synchronized long readLONG() throws IOException {
 		short[] buffer = new short[4];
 		if (read(buffer) != 4) throw new EOFException();
@@ -282,7 +286,9 @@ public class TiffInputStream extends BufferedInputStream {
 	 * Methods that read arrays of data
 	 */
 
-	// TIFF's BYTE type, a 1-byte unsigned integer, must be read as a 2-byte short in order to preserve sign.
+	/*
+	 * TIFF's BYTE type, a 1-byte unsigned integer, must be read as a 2-byte short in order to preserve sign.
+	 */
 	public synchronized short[] readBYTE(int length) throws TiffProcessorException, IOException {
 		short[] buffer = new short[length];
 		if (read(buffer) != length) throw new EOFException();
@@ -304,7 +310,7 @@ public class TiffInputStream extends BufferedInputStream {
 		return newString(buffer);
 	}
 
-	// Trim null padded ASCII sequences. Yes, it can happen in proprietary tags.
+	// Trim null padded ASCII sequences. Can happen in proprietary tags.
 	private String newString(byte[] buffer) {
 		int size = 0;
 		for (int i = 0; i < buffer.length; i++) if (buffer[i] > 0) size++; else break;

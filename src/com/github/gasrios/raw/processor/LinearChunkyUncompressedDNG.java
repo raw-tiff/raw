@@ -21,6 +21,7 @@ import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.lang.RATIONAL;
 import com.github.gasrios.raw.lang.SRATIONAL;
 import com.github.gasrios.raw.lang.TiffProcessorException;
+import com.github.gasrios.raw.lang.TiffProcessorRuntimeException;
 
 /*
  * This class makes all transformations deemed too complex to be at com.github.gasrios.raw.data.ImageFileDirectoryLoader when processing
@@ -34,41 +35,38 @@ import com.github.gasrios.raw.lang.TiffProcessorException;
  * business is doing actual photo editing. Just extend this class and consume the info in attribute image.
  *
  * TODO assuming Orientation = 1
- * TODO assuming Compression = 1
- * TODO assuming PhotometricInterpretation = 34892
- * TODO assuming PlanarConfiguration = 1
  * TODO assuming SamplesPerPixel = 3. See Tags ReductionMatrix1 and ReductionMatrix2.
  */
 
-public class LoadHighResolutionImage extends AbstractTiffProcessor {
+public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 
-	protected double[][][] image;
-	protected double[][]   cameraToXYZ_D50;
-	protected double[]	   cameraNeutral;
-
-	private   RATIONAL[]   analogBalance;
-	private   int[]		   bitsPerSample;;
-	private   int		   calibrationIlluminant1;
-	private   int		   calibrationIlluminant2;
-	private   SRATIONAL[]  cameraCalibration1;
-	private   SRATIONAL[]  cameraCalibration2;
-	private   SRATIONAL[]  colorMatrix1;
-	private   SRATIONAL[]  colorMatrix2;
-	private   SRATIONAL[]  forwardMatrix1;
-	private   SRATIONAL[]  forwardMatrix2;
-	private   int		   samplesPerPixel;
+	protected	double[][][]	image;
+	protected	double[][]		cameraToXYZ_D50;
+	protected	double[]		cameraNeutral;
+	private		RATIONAL[]		analogBalance;
+	private		int[]			bitsPerSample;;
+	private		int				calibrationIlluminant1;
+	private		int				calibrationIlluminant2;
+	private		SRATIONAL[]		cameraCalibration1;
+	private		SRATIONAL[]		cameraCalibration2;
+	private		SRATIONAL[]		colorMatrix1;
+	private		SRATIONAL[]		colorMatrix2;
+	private		SRATIONAL[]		forwardMatrix1;
+	private		SRATIONAL[]		forwardMatrix2;
+	private		int				samplesPerPixel;
+	private		int[]			whiteLevel;
 
 	@Override public void firstIfd(ImageFileDirectory ifd) {
 
-		analogBalance		   = (RATIONAL[])  ifd.get(Tag.AnalogBalance);
-		calibrationIlluminant1 = (int)		   ifd.get(Tag.CalibrationIlluminant1);
-		calibrationIlluminant2 = (int)		   ifd.get(Tag.CalibrationIlluminant2);
-		cameraCalibration1	   = (SRATIONAL[]) ifd.get(Tag.CameraCalibration1);
-		cameraCalibration2	   = (SRATIONAL[]) ifd.get(Tag.CameraCalibration2);
-		colorMatrix1		   = (SRATIONAL[]) ifd.get(Tag.ColorMatrix1);
-		colorMatrix2		   = (SRATIONAL[]) ifd.get(Tag.ColorMatrix2);
-		forwardMatrix1		   = (SRATIONAL[]) ifd.get(Tag.ForwardMatrix1);
-		forwardMatrix2		   = (SRATIONAL[]) ifd.get(Tag.ForwardMatrix2);
+		analogBalance			= (RATIONAL[])	ifd.get(Tag.AnalogBalance);
+		calibrationIlluminant1	= (int)			ifd.get(Tag.CalibrationIlluminant1);
+		calibrationIlluminant2	= (int)			ifd.get(Tag.CalibrationIlluminant2);
+		cameraCalibration1		= (SRATIONAL[])	ifd.get(Tag.CameraCalibration1);
+		cameraCalibration2		= (SRATIONAL[])	ifd.get(Tag.CameraCalibration2);
+		colorMatrix1			= (SRATIONAL[])	ifd.get(Tag.ColorMatrix1);
+		colorMatrix2			= (SRATIONAL[])	ifd.get(Tag.ColorMatrix2);
+		forwardMatrix1			= (SRATIONAL[])	ifd.get(Tag.ForwardMatrix1);
+		forwardMatrix2			= (SRATIONAL[])	ifd.get(Tag.ForwardMatrix2);
 
 		/*
 		 * See https://forums.adobe.com/message/9222350
@@ -87,25 +85,33 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
 	@Override public final void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
 
+		if (
+			34892	!= (int) ifd.get(Tag.PhotometricInterpretation)	||
+			1		!= (int) ifd.get(Tag.Compression)				||
+			1		!= (int) ifd.get(Tag.PlanarConfiguration)
+		)
+			throw new TiffProcessorRuntimeException("Image is not linear, chunky and uncompressed raw.");
+
 		samplesPerPixel = ((int)	   ifd.get(Tag.SamplesPerPixel));
 		bitsPerSample	= (int[])	   ifd.get(Tag.BitsPerSample);
+		whiteLevel		= (int[])	   ifd.get(Tag.WhiteLevel);
 
 		cameraToXYZ_D50 = Math.cameraToXYZ_D50(
-				analogBalance,
-				cameraNeutral,
-				calibrationIlluminant1,
-				calibrationIlluminant2,
-				cameraCalibration1,
-				cameraCalibration2,
-				colorMatrix1,
-				colorMatrix2,
-				forwardMatrix1,
-				forwardMatrix2
-			);
+			analogBalance,
+			cameraNeutral,
+			calibrationIlluminant1,
+			calibrationIlluminant2,
+			cameraCalibration1,
+			cameraCalibration2,
+			colorMatrix1,
+			colorMatrix2,
+			forwardMatrix1,
+			forwardMatrix2
+		);
 
-		// FIXME TIFF property is LONG, but java arrays have their size defined as int.
-		int width		= (int) (long) ifd.get(Tag.ImageWidth);
-		int length		= (int) (long) ifd.get(Tag.ImageLength);
+		// TIFF property is LONG, but java arrays have their size defined as, and limited to, int.
+		int width	= (int) (long) ifd.get(Tag.ImageWidth);
+		int length	= (int) (long) ifd.get(Tag.ImageLength);
 
 		image = new double[width][length][0];
 
@@ -138,23 +144,24 @@ public class LoadHighResolutionImage extends AbstractTiffProcessor {
 
 	}
 
-	// TODO Divide by WhiteLevel, not constant.
 	protected final double[] readSensorLevels(short[] strip, int offset, ByteOrder byteOrder) {
 		double[] sensorLevels = new double[samplesPerPixel];
 		for (int i = 0; i < samplesPerPixel; i++) {
-			if (bitsPerSample[i] <= 8) {
-				short[] sample = new short[1];
+			short[] sample;
+			// See Digital Negative Specification Version 1.4.0.0, page 18.
+			if (bitsPerSample[i] == 8) {
+				sample = new short[1];
 				System.arraycopy(strip, offset, sample, 0, 1);
-				sensorLevels[i] = sample[0]/255D;
 			} else if (bitsPerSample[i] <= 16) {
-				short[] sample = new short[2];
+				sample = new short[2];
 				System.arraycopy(strip, offset, sample, 0, 2);
-				sensorLevels[i] = TiffInputStream.toInt(sample, byteOrder)/65535D;
 			} else if (bitsPerSample[i] <= 32) {
-				short[] sample = new short[4];
+				sample = new short[4];
 				System.arraycopy(strip, offset, sample, 0, 4);
-				sensorLevels[i] = TiffInputStream.toLong(sample, byteOrder)/4294967295D;
+			} else {
+				throw new TiffProcessorRuntimeException("Invalid bitsPerSample value of " + bitsPerSample[i]);
 			}
+			sensorLevels[i] = TiffInputStream.toInt(sample, byteOrder)/(double) whiteLevel[i];
 			offset += 1 + (bitsPerSample[i]-1)/8;
 		}
 		return sensorLevels;

@@ -40,7 +40,7 @@ import com.github.gasrios.raw.lang.TiffProcessorException;
  * IFD. On the other hand "processFirstIfd" is considered more generic than  "processThumbnailIfd" because a thumbnail is also
  * a first IFD but the contrary is not true.
  *
- * Calling order of "end()" methods follow the opposite rule "more generic first" to provide proper nesting.
+ * Calling order of "end()" methods follows the opposite rule "more generic first" to provide proper nesting.
  */
 
 public interface TiffProcessor {

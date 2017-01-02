@@ -16,12 +16,12 @@ import java.io.FileInputStream;
 
 import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LoadHighResolutionImage;
+import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
 import com.github.gasrios.raw.swing.ImageFrame;
 import com.github.gasrios.raw.swing.ImageSRGB;
 
-public class Saturate extends LoadHighResolutionImage {
+public class Saturate extends LinearChunkyUncompressedDNG {
 
 	public static void main(String[] args) throws Exception {
 		new TiffProcessorEngine(new FileInputStream(args[0]), new Saturate()).run();
