@@ -10,7 +10,7 @@
  * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-package com.github.gasrios.raw;
+package com.github.gasrios.raw.examples;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Array;
@@ -20,6 +20,10 @@ import com.github.gasrios.raw.data.ImageFileDirectory;
 import com.github.gasrios.raw.data.Tag;
 import com.github.gasrios.raw.processor.AbstractTiffProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
+
+/*
+ * Read & display metadata from TIFF file.
+ */
 
 public class ReadMetadata extends AbstractTiffProcessor {
 
@@ -49,7 +53,7 @@ public class ReadMetadata extends AbstractTiffProcessor {
 			System.out.print(tag + " = " + Array.get(value, 0).getClass().getName() + "[" + Array.getLength(value)  + "] { ");
 			System.out.print(Array.get(value, 0));
 			for (int i = 1; i < (Array.getLength(value) > 10? 10 : Array.getLength(value)); i++) System.out.print(", " + Array.get(value, i));
-			if (Array.getLength(value) > 10) System.out.print("...");
+			if (Array.getLength(value) > 10) System.out.print("…");
 			System.out.println(" }");
 		}
 	}

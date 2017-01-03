@@ -40,33 +40,15 @@ import com.github.gasrios.raw.lang.TiffProcessorRuntimeException;
 
 public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 
-	protected	double[][][]	image;
-	protected	double[][]		cameraToXYZ_D50;
 	protected	double[]		cameraNeutral;
-	private		RATIONAL[]		analogBalance;
-	private		int[]			bitsPerSample;;
-	private		int				calibrationIlluminant1;
-	private		int				calibrationIlluminant2;
-	private		SRATIONAL[]		cameraCalibration1;
-	private		SRATIONAL[]		cameraCalibration2;
-	private		SRATIONAL[]		colorMatrix1;
-	private		SRATIONAL[]		colorMatrix2;
-	private		SRATIONAL[]		forwardMatrix1;
-	private		SRATIONAL[]		forwardMatrix2;
+	protected	double[][]		cameraToXYZ_D50;
+	protected	double[][][]	image;
+
+	private		int[]			bitsPerSample;
 	private		int				samplesPerPixel;
 	private		int[]			whiteLevel;
 
 	@Override public void firstIfd(ImageFileDirectory ifd) {
-
-		analogBalance			= (RATIONAL[])	ifd.get(Tag.AnalogBalance);
-		calibrationIlluminant1	= (int)			ifd.get(Tag.CalibrationIlluminant1);
-		calibrationIlluminant2	= (int)			ifd.get(Tag.CalibrationIlluminant2);
-		cameraCalibration1		= (SRATIONAL[])	ifd.get(Tag.CameraCalibration1);
-		cameraCalibration2		= (SRATIONAL[])	ifd.get(Tag.CameraCalibration2);
-		colorMatrix1			= (SRATIONAL[])	ifd.get(Tag.ColorMatrix1);
-		colorMatrix2			= (SRATIONAL[])	ifd.get(Tag.ColorMatrix2);
-		forwardMatrix1			= (SRATIONAL[])	ifd.get(Tag.ForwardMatrix1);
-		forwardMatrix2			= (SRATIONAL[])	ifd.get(Tag.ForwardMatrix2);
 
 		/*
 		 * See https://forums.adobe.com/message/9222350
@@ -81,6 +63,19 @@ public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 		 */
 		cameraNeutral = RATIONAL.asDoubleArray((RATIONAL[])  ifd.get(Tag.AsShotNeutral));
 
+		cameraToXYZ_D50 = Math.cameraToXYZ_D50(
+				(RATIONAL[])	ifd.get(Tag.AnalogBalance),
+				cameraNeutral,
+				(int)			ifd.get(Tag.CalibrationIlluminant1),
+				(int)			ifd.get(Tag.CalibrationIlluminant2),
+				(SRATIONAL[])	ifd.get(Tag.CameraCalibration1),
+				(SRATIONAL[])	ifd.get(Tag.CameraCalibration2),
+				(SRATIONAL[])	ifd.get(Tag.ColorMatrix1),
+				(SRATIONAL[])	ifd.get(Tag.ColorMatrix2),
+				(SRATIONAL[])	ifd.get(Tag.ForwardMatrix1),
+				(SRATIONAL[])	ifd.get(Tag.ForwardMatrix2)
+			);
+
 	}
 
 	@Override public final void highResolutionIfd(ImageFileDirectory ifd) throws TiffProcessorException {
@@ -90,28 +85,15 @@ public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 			1		!= (int) ifd.get(Tag.Compression)				||
 			1		!= (int) ifd.get(Tag.PlanarConfiguration)
 		)
-			throw new TiffProcessorRuntimeException("Image is not linear, chunky and uncompressed raw.");
+			throw new TiffProcessorRuntimeException("Image is not a linear, chunky and uncompressed DNG.");
 
-		samplesPerPixel = ((int)	   ifd.get(Tag.SamplesPerPixel));
-		bitsPerSample	= (int[])	   ifd.get(Tag.BitsPerSample);
-		whiteLevel		= (int[])	   ifd.get(Tag.WhiteLevel);
-
-		cameraToXYZ_D50 = Math.cameraToXYZ_D50(
-			analogBalance,
-			cameraNeutral,
-			calibrationIlluminant1,
-			calibrationIlluminant2,
-			cameraCalibration1,
-			cameraCalibration2,
-			colorMatrix1,
-			colorMatrix2,
-			forwardMatrix1,
-			forwardMatrix2
-		);
+		bitsPerSample	= (int[])	ifd.get(Tag.BitsPerSample);
+		samplesPerPixel	= ((int)	ifd.get(Tag.SamplesPerPixel));
+		whiteLevel		= (int[])	ifd.get(Tag.WhiteLevel);
 
 		// TIFF property is LONG, but java arrays have their size defined as, and limited to, int.
-		int width	= (int) (long) ifd.get(Tag.ImageWidth);
-		int length	= (int) (long) ifd.get(Tag.ImageLength);
+		int width	= (int)(long)	ifd.get(Tag.ImageWidth);
+		int length	= (int)(long)	ifd.get(Tag.ImageLength);
 
 		image = new double[width][length][0];
 
@@ -125,26 +107,21 @@ public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 			short[] strip = ifd.getStripAsShortArray(i);
 			for (int j = 0; pixelSize*j < strip.length; j = j + 1)
 				image[j%width][j/width + i*rowsPerStrip] =
-					camera2lsh(strip, j*pixelSize, ifd.getByteOrder());
+					camera2lsh(readSensorLevels(strip, j*pixelSize, ifd.getByteOrder()));
 		}
 
 	}
 
-	protected double[] camera2lsh(short[] strip, int offset, ByteOrder byteOrder) {
-
-		double[] sensorLevels = readSensorLevels(strip, offset, byteOrder);
-
-		/*
-		 * Saturation is reached when sensor level exceeds its analog cameraNeutral channel, not its own physical saturation
-		 * limit, otherwise it's up to the transformation matrix whether hues will be preserved when sensorLevels > cameraNeutral.
-		 */
-		for (int k = 0; k < sensorLevels.length; k++) if (sensorLevels[k] > cameraNeutral[k]) sensorLevels[k] = cameraNeutral[k];
-
+	/*
+	 * Saturation is reached when sensor level exceeds its analog cameraNeutral channel, not its own physical saturation
+	 * limit, otherwise it's up to the transformation matrix whether hues will be preserved when sensorLevels > cameraNeutral.
+	 */
+	protected double[] camera2lsh(double[] sensorLevels) {
+		for (int i = 0; i < sensorLevels.length; i++) if (sensorLevels[i] > cameraNeutral[i]) sensorLevels[i] = cameraNeutral[i];
 		return Math.luv2lsh(Math.xyz2luv(Math.multiply(cameraToXYZ_D50, sensorLevels)));
-
 	}
 
-	protected final double[] readSensorLevels(short[] strip, int offset, ByteOrder byteOrder) {
+	private final double[] readSensorLevels(short[] strip, int offset, ByteOrder byteOrder) {
 		double[] sensorLevels = new double[samplesPerPixel];
 		for (int i = 0; i < samplesPerPixel; i++) {
 			short[] sample;

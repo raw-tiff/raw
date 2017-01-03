@@ -10,7 +10,7 @@
  * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-package com.github.gasrios.raw;
+package com.github.gasrios.raw.examples;
 
 import java.io.FileInputStream;
 
@@ -21,15 +21,19 @@ import com.github.gasrios.raw.processor.TiffProcessorEngine;
 import com.github.gasrios.raw.swing.ImageFrame;
 import com.github.gasrios.raw.swing.ImageSRGB;
 
-public class Saturate extends LinearChunkyUncompressedDNG {
+/*
+ * Turn image to black and white, preserving perceived luminance.
+ */
+
+public class BlackAndWhite extends LinearChunkyUncompressedDNG {
 
 	public static void main(String[] args) throws Exception {
-		new TiffProcessorEngine(new FileInputStream(args[0]), new Saturate()).run();
+		new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite()).run();
 	}
 
 	@Override public void end() throws TiffProcessorException {
 
-		ImageSRGB imageSRGB = new ImageSRGB(Math.saturate(image, .25D));
+		ImageSRGB imageSRGB = new ImageSRGB(Math.blackAndWhite(image));
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;

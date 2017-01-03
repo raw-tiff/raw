@@ -10,26 +10,29 @@
  * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-package com.github.gasrios.raw;
+package com.github.gasrios.raw.examples;
 
 import java.io.FileInputStream;
 
-import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
+import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
 import com.github.gasrios.raw.swing.ImageFrame;
 import com.github.gasrios.raw.swing.ImageSRGB;
 
-public class BlackAndWhite extends LinearChunkyUncompressedDNG {
+/*
+ * Load and display image, without altering it in any way.
+ */
+
+public class DisplayImage extends LinearChunkyUncompressedDNG {
 
 	public static void main(String[] args) throws Exception {
-		new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite()).run();
+		new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage()).run();
 	}
 
 	@Override public void end() throws TiffProcessorException {
 
-		ImageSRGB imageSRGB = new ImageSRGB(Math.blackAndWhite(image));
+		ImageSRGB imageSRGB = new ImageSRGB(image);
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;
