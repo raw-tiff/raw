@@ -16,9 +16,9 @@ I am looking for contributors willing to help me implement support for reading n
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3 of the License.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
+You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
 
 ** Before you begin **
 
@@ -99,7 +99,7 @@ Class com.github.gasrios.raw.LoadHighResolutionImage provides a TiffProcessor th
 
 This software uses Adobe XMP Toolkit for Java, licensed under the BSD license. The original source can be downloaded here: http://www.adobe.com/devnet/xmp/library/eula-xmp-library-java.html
 
-Copyright (c) 2009, Adobe Systems Incorporated  All rights reserved.
+Copyright (c) 2009, Adobe Systems Incorporated All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 

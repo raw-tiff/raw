@@ -61,7 +61,7 @@ public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 		 * only know the matrix that Adobe used, so your CameraNeutral as calculated may not be the same as what the camera
 		 * originally thought.
 		 */
-		cameraNeutral = RATIONAL.asDoubleArray((RATIONAL[])  ifd.get(Tag.AsShotNeutral));
+		cameraNeutral = RATIONAL.asDoubleArray((RATIONAL[]) ifd.get(Tag.AsShotNeutral));
 
 		cameraToXYZ_D50 = Math.cameraToXYZ_D50(
 				(RATIONAL[])	ifd.get(Tag.AnalogBalance),
@@ -102,13 +102,29 @@ public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 
 		int rowsPerStrip = (int) (long) ifd.get(Tag.RowsPerStrip);
 
+		double[] minLevels = new double[] { Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE };
+		double[] maxLevels = new double[] { Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE };
+
 		// See TIFF 6.0 Specification, page 39
 		for (int i = 0; i < (int) ((length + rowsPerStrip - 1) / rowsPerStrip); i++) {
 			short[] strip = ifd.getStripAsShortArray(i);
-			for (int j = 0; pixelSize*j < strip.length; j = j + 1)
-				image[j%width][j/width + i*rowsPerStrip] =
-					camera2lsh(readSensorLevels(strip, j*pixelSize, ifd.getByteOrder()));
+			for (int j = 0; pixelSize*j < strip.length; j = j + 1) {
+				double[] level = readSensorLevels(strip, j*pixelSize, ifd.getByteOrder());
+				for (int k = 0; k < level.length; k++) if (minLevels[k] > level[k]) minLevels[k] = level[k];
+				for (int k = 0; k < level.length; k++) if (maxLevels[k] < level[k]) maxLevels[k] = level[k];
+				image[j%width][j/width + i*rowsPerStrip] = camera2lsh(level);
+			}
 		}
+
+		System.out.print("\nMin levels: [ ");
+
+		for (int i = 0; i < minLevels.length; i++) System.out.print(minLevels[i] + " ");
+
+		System.out.print("]\n\nMax levels: [ ");
+
+		for (int i = 0; i < maxLevels.length; i++) System.out.print(maxLevels[i] + " ");
+
+		System.out.println("]");
 
 	}
 

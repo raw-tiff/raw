@@ -398,6 +398,10 @@ public final class Math {
 		new double[] {  0.0719453D, -0.2289914D,  1.4052427D }
 	};
 
+	public static int[] xyz2sRGB(double[] pixel) {
+		return to8bits(gammaCorrection(Math.multiply(XYZ_D50ToSRGB, pixel)));
+	}
+
 	public static int[] lsh2sRGB(double[] pixel) {
 		return to8bits(gammaCorrection(Math.multiply(XYZ_D50ToSRGB, Math.luv2xyz(Math.lsh2luv(pixel)))));
 	}

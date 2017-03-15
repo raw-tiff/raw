@@ -50,7 +50,7 @@ public class ReadMetadata extends AbstractTiffProcessor {
 	@Override public void tag(Tag tag, Object value) {
 		if (!value.getClass().isArray()) System.out.println(tag + " = " + value + " (" + value.getClass().getName() + ")");
 		else {
-			System.out.print(tag + " = " + Array.get(value, 0).getClass().getName() + "[" + Array.getLength(value)  + "] { ");
+			System.out.print(tag + " = " + Array.get(value, 0).getClass().getName() + "[" + Array.getLength(value) + "] { ");
 			System.out.print(Array.get(value, 0));
 			for (int i = 1; i < (Array.getLength(value) > 10? 10 : Array.getLength(value)); i++) System.out.print(", " + Array.get(value, i));
 			if (Array.getLength(value) > 10) System.out.print("…");

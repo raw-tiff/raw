@@ -33,11 +33,11 @@ import com.github.gasrios.raw.lang.TiffProcessorException;
  * - processPreviewIfd()
  * - processIfd()
  *
- *  Same applies to the high resolution and EXIF IFDs. We also provide "end()" methods called after processing an IFD.
+ * Same applies to the high resolution and EXIF IFDs. We also provide "end()" methods called after processing an IFD.
  *
  * Calling order obeys the logic "more generic last", although this is a rather loose definition. In the case above we assume
  * "processPreviewIfd" to be more generic than "processFirstIfd" because a file may have several previews but only one first
- * IFD. On the other hand "processFirstIfd" is considered more generic than  "processThumbnailIfd" because a thumbnail is also
+ * IFD. On the other hand "processFirstIfd" is considered more generic than "processThumbnailIfd" because a thumbnail is also
  * a first IFD but the contrary is not true.
  *
  * Calling order of "end()" methods follows the opposite rule "more generic first" to provide proper nesting.

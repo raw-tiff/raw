@@ -109,8 +109,8 @@ public class TiffInputStream extends BufferedInputStream {
 		// See TIFF 6.0 Specification, page 13
 		short[] buffer = new short[2];
 		if (read(buffer) != 2) throw new EOFException();
-		if (buffer[0] == 0x49 && buffer[1] == 0x49) byteOrder =  ByteOrder.LITTLE_ENDIAN;
-		else if (buffer[0] == 0x4D && buffer[1] == 0x4D) byteOrder =  ByteOrder.BIG_ENDIAN;
+		if		(buffer[0] == 0x49 && buffer[1] == 0x49) byteOrder = ByteOrder.LITTLE_ENDIAN;
+		else if (buffer[0] == 0x4D && buffer[1] == 0x4D) byteOrder = ByteOrder.BIG_ENDIAN;
 		else throw new TiffProcessorException("Invalid endianness specification: " + (char) buffer[0] + (char) buffer[1]);
 
 		short version = readSSHORT();
