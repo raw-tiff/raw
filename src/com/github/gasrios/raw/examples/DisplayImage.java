@@ -14,11 +14,12 @@ package com.github.gasrios.raw.examples;
 
 import java.io.FileInputStream;
 
+import com.github.gasrios.raw.formats.*;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.TiffProcessorEngine;
 import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
+import com.github.gasrios.raw.processor.TiffProcessorEngine;
+import com.github.gasrios.raw.swing.DisplayableImage;
 import com.github.gasrios.raw.swing.ImageFrame;
-import com.github.gasrios.raw.swing.ImageSRGB;
 
 /*
  * Load and display image, without altering it in any way.
@@ -26,13 +27,19 @@ import com.github.gasrios.raw.swing.ImageSRGB;
 
 public class DisplayImage extends LinearChunkyUncompressedDNG {
 
+	public DisplayImage(ImageCIEXYZ image) { super(image); }
+
 	public static void main(String[] args) throws Exception {
-		new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage()).run();
+		new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageCIEXYZ())).run();
+		//new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageCIELUV())).run();
+		//new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageCIELCH())).run();
+		//new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageLSH())).run();
+		//new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageSRGB())).run();
 	}
 
 	@Override public void end() throws TiffProcessorException {
 
-		ImageSRGB imageSRGB = new ImageSRGB(image);
+		DisplayableImage imageSRGB = new DisplayableImage(image);
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;

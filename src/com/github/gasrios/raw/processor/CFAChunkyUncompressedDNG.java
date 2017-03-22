@@ -207,15 +207,9 @@ public class CFAChunkyUncompressedDNG extends AbstractTiffProcessor {
 
 		}
 
-		System.out.print("\nMin levels: [ ");
-
 		for (int i = 0; i < minLevels.length; i++) System.out.print(minLevels[i] + " ");
 
-		System.out.print("]\n\nMax levels: [ ");
-
 		for (int i = 0; i < maxLevels.length; i++) System.out.print(maxLevels[i] + " ");
-
-		System.out.println("]");
 
 	}
 

@@ -14,7 +14,7 @@ package com.github.gasrios.raw.swing;
 
 import java.awt.image.BufferedImage;
 
-import com.github.gasrios.raw.lang.Math;
+import com.github.gasrios.raw.formats.ImageCIEXYZ;
 
 /*
  * See https://docs.oracle.com/javase/7/docs/api/java/awt/image/BufferedImage.html
@@ -26,12 +26,14 @@ import com.github.gasrios.raw.lang.Math;
  * There's very little left to do here: we just convert CIEXYZ D50 to sRGB, Java's default color space.
  */
 
-public class ImageSRGB extends BufferedImage {
+public class DisplayableImage extends BufferedImage {
 
 	// See https://docs.oracle.com/javase/7/docs/api/java/awt/image/BufferedImage.html#BufferedImage(int, int, int)
-	public ImageSRGB(double[][][] image) {
-		super(image.length, image[0].length, BufferedImage.TYPE_INT_RGB);
-		for (int i = 0; i < getWidth(); i++) for (int j = 0; j < getHeight(); j++) setRGB(i, j, Math.lsh2sRGB(image[i][j]));
+	public DisplayableImage(ImageCIEXYZ image) {
+		// BufferedImage.TYPE_INT_RGB == sRGB
+		super(image.getImage().length, image.getImage()[0].length, BufferedImage.TYPE_INT_RGB);
+		double [][][] im = image.getImage();
+		for (int i = 0; i < getWidth(); i++) for (int j = 0; j < getHeight(); j++) setRGB(i, j, image.toSRGB(im[i][j]));
 	}
 
 	private synchronized void setRGB(int column, int row, int[] pixel) { setRGB(column, row, (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]); }

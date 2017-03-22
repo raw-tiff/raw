@@ -16,6 +16,7 @@ import java.nio.ByteOrder;
 
 import com.github.gasrios.raw.data.ImageFileDirectory;
 import com.github.gasrios.raw.data.Tag;
+import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.io.TiffInputStream;
 import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.lang.RATIONAL;
@@ -40,13 +41,15 @@ import com.github.gasrios.raw.lang.TiffProcessorRuntimeException;
 
 public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 
-	protected	double[]		cameraNeutral;
-	protected	double[][]		cameraToXYZ_D50;
-	protected	double[][][]	image;
+	protected	double[]	cameraNeutral;
+	protected	double[][]	cameraToXYZ_D50;
+	protected	ImageCIEXYZ		image;
 
-	private		int[]			bitsPerSample;
-	private		int				samplesPerPixel;
-	private		int[]			whiteLevel;
+	private		int[]		bitsPerSample;
+	private		int			samplesPerPixel;
+	private		int[]		whiteLevel;
+
+	public LinearChunkyUncompressedDNG(ImageCIEXYZ image) { this.image = image; }
 
 	@Override public void firstIfd(ImageFileDirectory ifd) {
 
@@ -95,7 +98,7 @@ public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 		int width	= (int)(long)	ifd.get(Tag.ImageWidth);
 		int length	= (int)(long)	ifd.get(Tag.ImageLength);
 
-		image = new double[width][length][0];
+		image.setImage(new double[width][length][0]);
 
 		int pixelSize = 0;
 		for (int i = 0; i < samplesPerPixel; i++) pixelSize += 1 + (bitsPerSample[i]-1)/8;
@@ -109,22 +112,12 @@ public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 		for (int i = 0; i < (int) ((length + rowsPerStrip - 1) / rowsPerStrip); i++) {
 			short[] strip = ifd.getStripAsShortArray(i);
 			for (int j = 0; pixelSize*j < strip.length; j = j + 1) {
-				double[] level = readSensorLevels(strip, j*pixelSize, ifd.getByteOrder());
-				for (int k = 0; k < level.length; k++) if (minLevels[k] > level[k]) minLevels[k] = level[k];
-				for (int k = 0; k < level.length; k++) if (maxLevels[k] < level[k]) maxLevels[k] = level[k];
-				image[j%width][j/width + i*rowsPerStrip] = camera2lsh(level);
+				double[] sensorLevels = readSensorLevels(strip, j*pixelSize, ifd.getByteOrder());
+				for (int k = 0; k < sensorLevels.length; k++) if (minLevels[k] > sensorLevels[k]) minLevels[k] = sensorLevels[k];
+				for (int k = 0; k < sensorLevels.length; k++) if (maxLevels[k] < sensorLevels[k]) maxLevels[k] = sensorLevels[k];
+				image.getImage()[j%width][j/width + i*rowsPerStrip] = image.fromXYZ(Math.multiply(cameraToXYZ_D50, trim(sensorLevels)));
 			}
 		}
-
-		System.out.print("\nMin levels: [ ");
-
-		for (int i = 0; i < minLevels.length; i++) System.out.print(minLevels[i] + " ");
-
-		System.out.print("]\n\nMax levels: [ ");
-
-		for (int i = 0; i < maxLevels.length; i++) System.out.print(maxLevels[i] + " ");
-
-		System.out.println("]");
 
 	}
 
@@ -132,9 +125,9 @@ public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 	 * Saturation is reached when sensor level exceeds its analog cameraNeutral channel, not its own physical saturation
 	 * limit, otherwise it's up to the transformation matrix whether hues will be preserved when sensorLevels > cameraNeutral.
 	 */
-	protected double[] camera2lsh(double[] sensorLevels) {
+	protected double[] trim(double[] sensorLevels) {
 		for (int i = 0; i < sensorLevels.length; i++) if (sensorLevels[i] > cameraNeutral[i]) sensorLevels[i] = cameraNeutral[i];
-		return Math.luv2lsh(Math.xyz2luv(Math.multiply(cameraToXYZ_D50, sensorLevels)));
+		return sensorLevels;
 	}
 
 	private final double[] readSensorLevels(short[] strip, int offset, ByteOrder byteOrder) {

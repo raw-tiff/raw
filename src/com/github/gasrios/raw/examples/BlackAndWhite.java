@@ -14,12 +14,13 @@ package com.github.gasrios.raw.examples;
 
 import java.io.FileInputStream;
 
-import com.github.gasrios.raw.lang.Math;
+import com.github.gasrios.raw.formats.*;
+import com.github.gasrios.raw.lang.ImageEditing;
 import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
+import com.github.gasrios.raw.swing.DisplayableImage;
 import com.github.gasrios.raw.swing.ImageFrame;
-import com.github.gasrios.raw.swing.ImageSRGB;
 
 /*
  * Turn image to black and white, preserving perceived luminance.
@@ -27,19 +28,25 @@ import com.github.gasrios.raw.swing.ImageSRGB;
 
 public class BlackAndWhite extends LinearChunkyUncompressedDNG {
 
+	public BlackAndWhite(ImageCIEXYZ image) { super(image); }
+
 	public static void main(String[] args) throws Exception {
-		new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite()).run();
+		//new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageCIEXYZ())).run();
+		//new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageCIELUV())).run();
+		//new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageCIELCH())).run();
+		new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageLSH())).run();
+		//new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageSRGB())).run();
 	}
 
 	@Override public void end() throws TiffProcessorException {
 
-		ImageSRGB imageSRGB = new ImageSRGB(Math.blackAndWhite(image));
+		DisplayableImage displayableImage = new DisplayableImage(ImageEditing.blackAndWhite(image));
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;
 		System.gc();
 
-		new ImageFrame(imageSRGB, 1075, 716);
+		new ImageFrame(displayableImage, 1075, 716);
 
 	}
 
