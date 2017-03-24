@@ -40,7 +40,7 @@ public class Saturate extends LinearChunkyUncompressedDNG {
 
 	@Override public void end() throws TiffProcessorException {
 
-		DisplayableImage displayableImage = new DisplayableImage(ImageEditing.saturate(image, -1D));
+		DisplayableImage displayableImage = new DisplayableImage(ImageEditing.saturate((ImageLSH) image, 1D));
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;

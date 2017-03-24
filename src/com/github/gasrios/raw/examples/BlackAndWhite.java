@@ -40,7 +40,7 @@ public class BlackAndWhite extends LinearChunkyUncompressedDNG {
 
 	@Override public void end() throws TiffProcessorException {
 
-		DisplayableImage displayableImage = new DisplayableImage(ImageEditing.blackAndWhite(image));
+		DisplayableImage displayableImage = new DisplayableImage(ImageEditing.blackAndWhite((ImageLSH) image));
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;
