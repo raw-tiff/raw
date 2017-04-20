@@ -10,7 +10,7 @@
  * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-package com.github.gasrios.raw.examples;
+package com.github.gasrios.raw.examples.lgm2017;
 
 import java.io.FileInputStream;
 
@@ -94,7 +94,7 @@ public class Sandbox extends LinearChunkyUncompressedDNG {
 
 		// B&W, sRGB
 		new TiffProcessorEngine(new FileInputStream(args[0]), new Sandbox(new ImageSRGB()) {
-			
+
 			@Override public void end() throws TiffProcessorException {
 
 				long start = System.currentTimeMillis();

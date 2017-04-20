@@ -30,13 +30,7 @@ public class Saturate extends LinearChunkyUncompressedDNG {
 
 	public Saturate(ImageCIEXYZ image) { super(image); }
 
-	public static void main(String[] args) throws Exception {
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new Saturate(new ImageCIEXYZ())).run();
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new Saturate(new ImageCIELUV())).run();
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new Saturate(new ImageCIELCH())).run();
-		new TiffProcessorEngine(new FileInputStream(args[0]), new Saturate(new ImageLSH())).run();
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new Saturate(new ImageSRGB())).run();
-	}
+	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new Saturate(new ImageLSH())).run(); }
 
 	@Override public void end() throws TiffProcessorException {
 

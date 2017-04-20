@@ -29,13 +29,7 @@ public class DisplayImage extends LinearChunkyUncompressedDNG {
 
 	public DisplayImage(ImageCIEXYZ image) { super(image); }
 
-	public static void main(String[] args) throws Exception {
-		new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageCIEXYZ())).run();
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageCIELUV())).run();
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageCIELCH())).run();
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageLSH())).run();
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageSRGB())).run();
-	}
+	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageCIEXYZ())).run(); }
 
 	@Override public void end() throws TiffProcessorException {
 
