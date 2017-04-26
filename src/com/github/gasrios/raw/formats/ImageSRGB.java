@@ -4,7 +4,6 @@ import com.github.gasrios.raw.lang.Math;
 
 /*
  * Color space: normalized sRGB
- * TODO: HSV, HSL
  */
 public class ImageSRGB extends ImageCIEXYZ {
 

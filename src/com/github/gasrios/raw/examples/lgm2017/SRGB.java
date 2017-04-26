@@ -12,7 +12,11 @@
 
 package com.github.gasrios.raw.examples.lgm2017;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
 
 import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.formats.ImageSRGB;
@@ -28,48 +32,30 @@ import com.github.gasrios.raw.swing.ImageFrame;
 
 public class SRGB extends LinearChunkyUncompressedDNG {
 
-	public SRGB(ImageCIEXYZ image) { super(image); }
+	String fileName;
 
-	public static void main(String[] args) throws Exception {
+	public SRGB(ImageCIEXYZ image, String fileName) {
+		super(image);
+		this.fileName = fileName;
+	}
 
-		// B&W, sRGB
-		new TiffProcessorEngine(new FileInputStream(args[0]), new SRGB(new ImageSRGB()) {
+	@Override public void end() throws TiffProcessorException {
 
-			@Override public void end() throws TiffProcessorException {
+		//DisplayableImage displayableImage = new DisplayableImage(image);
+		DisplayableImage displayableImage = new DisplayableImage(increaseBrightness(blackAndWhite((ImageSRGB) image)));
 
-				long start = System.currentTimeMillis();
-				image = increaseBrightness(blackAndWhite((ImageSRGB) image));
-				double[][][] im = image.getImage();
-				double
-					min = Double.MAX_VALUE,
-					max = Double.MIN_VALUE;
+		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
+		image = null;
+		System.gc();
 
-				for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) {
-					if (min > im[i][j][0]) min = im[i][j][0];
-					if (max < im[i][j][0]) max = im[i][j][0];
-				}
+		new ImageFrame("sRGB", displayableImage, 1440, 900);
 
-				for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) {
-					double b = (im[i][j][0]-min)/(max-min);
-					for (int k = 0; k < 3; k ++) im[i][j][k] = b;
-				}
-
-				DisplayableImage displayableImage = new DisplayableImage(image);
-				System.out.println(System.currentTimeMillis() - start);
-
-				// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
-				image = null;
-				System.gc();
-
-				new ImageFrame("B&W, sRGB", displayableImage, 1440, 900);
-
-			}
-
-		}).run();
+		try { ImageIO.write(displayableImage, "PNG", new File(fileName+".png")); }
+		catch (IOException e) { throw new TiffProcessorException(e); }
 
 	}
 
-	public static ImageSRGB blackAndWhite(ImageSRGB image) {
+	private ImageSRGB blackAndWhite(ImageSRGB image) {
 
 		double[][][] im = image.getImage();
 
@@ -85,7 +71,7 @@ public class SRGB extends LinearChunkyUncompressedDNG {
 	}
 
 	// Only works for B&W images.
-	public static ImageSRGB increaseBrightness(ImageSRGB image) {
+	private ImageSRGB increaseBrightness(ImageSRGB image) {
 
 		double[][][] im = image.getImage();
 		double min = Double.MAX_VALUE, max = Double.MIN_VALUE;
@@ -103,5 +89,7 @@ public class SRGB extends LinearChunkyUncompressedDNG {
 		return image;
 
 	}
+
+	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new SRGB(new ImageSRGB(), args[0])).run(); }
 
 }

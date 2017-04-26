@@ -19,6 +19,7 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 
 import com.github.gasrios.raw.formats.ImageCIEXYZ;
+import com.github.gasrios.raw.formats.ImageCIELCH;
 import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
@@ -26,14 +27,14 @@ import com.github.gasrios.raw.swing.DisplayableImage;
 import com.github.gasrios.raw.swing.ImageFrame;
 
 /*
- * Increase brightness will turn the image green. Compare with correct brightness increase.
+ * Compare to B&W correct brightness increase.
  */
 
-public class CIEXYZ extends LinearChunkyUncompressedDNG {
+public class CIELCH extends LinearChunkyUncompressedDNG {
 
 	String fileName;
 
-	public CIEXYZ(ImageCIEXYZ image, String fileName) {
+	public CIELCH(ImageCIEXYZ image, String fileName) {
 		super(image);
 		this.fileName = fileName;
 	}
@@ -41,35 +42,35 @@ public class CIEXYZ extends LinearChunkyUncompressedDNG {
 	@Override public void end() throws TiffProcessorException {
 
 		//DisplayableImage displayableImage = new DisplayableImage(image);
-		DisplayableImage displayableImage = new DisplayableImage(increaseBrightness(image));
+		DisplayableImage displayableImage = new DisplayableImage(increaseBrightness((ImageCIELCH) image));
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;
 		System.gc();
 
-		new ImageFrame("CIEXYZ", displayableImage, 1440, 900);
+		new ImageFrame("LSH", displayableImage, 1440, 900);
 
 		try { ImageIO.write(displayableImage, "PNG", new File(fileName+".png")); }
 		catch (IOException e) { throw new TiffProcessorException(e); }
 
 	}
 
-	private ImageCIEXYZ increaseBrightness(ImageCIEXYZ image) {
+	public static ImageCIELCH increaseBrightness(ImageCIELCH image) {
 
 		double[][][] im = image.getImage();
 		double min = Double.MAX_VALUE, max = Double.MIN_VALUE;
 
 		for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) {
-			if (min > im[i][j][1]) min = im[i][j][1];
-			if (max < im[i][j][1]) max = im[i][j][1];
+			if (min > im[i][j][0]) min = im[i][j][0];
+			if (max < im[i][j][0]) max = im[i][j][0];
 		}
 
-		for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) im[i][j][1] = (im[i][j][1]-min)/(max-min);
+		for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) im[i][j][0] = 100*(im[i][j][0]-min)/(max-min);
 
 		return image;
 
 	}
 
-	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new CIEXYZ(new ImageCIEXYZ(), args[0])).run(); }
+	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new CIELCH(new ImageCIELCH(), args[0])).run(); }
 
 }
