@@ -20,7 +20,7 @@ import javax.imageio.ImageIO;
 
 import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
+import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
 import com.github.gasrios.raw.swing.DisplayableImage;
 import com.github.gasrios.raw.swing.ImageFrame;
@@ -29,7 +29,7 @@ import com.github.gasrios.raw.swing.ImageFrame;
  * Increase brightness will turn the image green. Compare with correct brightness increase.
  */
 
-public class CIEXYZ extends LinearChunkyUncompressedDNG {
+public class CIEXYZ extends LinearChunkyUncompressedDngProcessor {
 
 	String fileName;
 

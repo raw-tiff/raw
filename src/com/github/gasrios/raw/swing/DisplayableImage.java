@@ -28,12 +28,30 @@ import com.github.gasrios.raw.formats.ImageCIEXYZ;
 
 public class DisplayableImage extends BufferedImage {
 
-	// See https://docs.oracle.com/javase/7/docs/api/java/awt/image/BufferedImage.html#BufferedImage(int, int, int)
-	public DisplayableImage(ImageCIEXYZ image) {
-		// BufferedImage.TYPE_INT_RGB == sRGB
-		super(image.getImage().length, image.getImage()[0].length, BufferedImage.TYPE_INT_RGB);
+	public enum Orientation { HORIZONTAL, VERTICAL }
+
+	/*
+	 * See https://docs.oracle.com/javase/7/docs/api/java/awt/image/BufferedImage.html#BufferedImage(int, int, int)
+	 */
+
+	public DisplayableImage(ImageCIEXYZ image) { this(image, Orientation.HORIZONTAL); }
+
+	public DisplayableImage(ImageCIEXYZ image, Orientation orientation) {
+
+		super(
+			orientation == Orientation.HORIZONTAL? image.getImage().length : image.getImage()[0].length,
+			orientation == Orientation.HORIZONTAL? image.getImage()[0].length : image.getImage().length,
+			// sRGB
+			BufferedImage.TYPE_INT_RGB
+		);
+
 		double [][][] im = image.getImage();
-		for (int i = 0; i < getWidth(); i++) for (int j = 0; j < getHeight(); j++) setRGB(i, j, image.toSRGB(im[i][j]));
+
+		if (orientation == Orientation.HORIZONTAL)
+			for (int i = 0; i < getWidth(); i++) for (int j = 0; j < getHeight(); j++) setRGB(i, j, image.toSRGB(im[i][j]));
+		else
+			for (int i = 0; i < getWidth(); i++) for (int j = 0; j < getHeight(); j++) setRGB(i, getHeight()-(j+1), image.toSRGB(im[j][i]));
+
 	}
 
 	private synchronized void setRGB(int column, int row, int[] pixel) { setRGB(column, row, (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]); }

@@ -39,7 +39,7 @@ import com.github.gasrios.raw.lang.TiffProcessorRuntimeException;
  * TODO assuming SamplesPerPixel = 3. See Tags ReductionMatrix1 and ReductionMatrix2.
  */
 
-public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
+public class LinearChunkyUncompressedDngProcessor extends AbstractTiffProcessor {
 
 	protected	double[]	cameraNeutral;
 	protected	double[][]	cameraToXYZ_D50;
@@ -49,7 +49,7 @@ public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 	private		int			samplesPerPixel;
 	private		int[]		whiteLevel;
 
-	public LinearChunkyUncompressedDNG(ImageCIEXYZ image) { this.image = image; }
+	public LinearChunkyUncompressedDngProcessor(ImageCIEXYZ image) { this.image = image; }
 
 	@Override public void firstIfd(ImageFileDirectory ifd) {
 
@@ -105,27 +105,36 @@ public class LinearChunkyUncompressedDNG extends AbstractTiffProcessor {
 
 		int rowsPerStrip = (int) (long) ifd.get(Tag.RowsPerStrip);
 
-		double[] minLevels = new double[] { Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE };
-		double[] maxLevels = new double[] { Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE };
-
 		// See TIFF 6.0 Specification, page 39
 		for (int i = 0; i < (int) ((length + rowsPerStrip - 1) / rowsPerStrip); i++) {
 			short[] strip = ifd.getStripAsShortArray(i);
-			for (int j = 0; pixelSize*j < strip.length; j = j + 1) {
-				double[] sensorLevels = readSensorLevels(strip, j*pixelSize, ifd.getByteOrder());
-				for (int k = 0; k < sensorLevels.length; k++) if (minLevels[k] > sensorLevels[k]) minLevels[k] = sensorLevels[k];
-				for (int k = 0; k < sensorLevels.length; k++) if (maxLevels[k] < sensorLevels[k]) maxLevels[k] = sensorLevels[k];
-				image.getImage()[j%width][j/width + i*rowsPerStrip] = image.fromXYZ(Math.multiply(cameraToXYZ_D50, trim(sensorLevels)));
-			}
+			for (int j = 0; pixelSize*j < strip.length; j = j + 1)
+				image.getImage()[j%width][j/width + i*rowsPerStrip] =
+					processConvertedPixel(
+						image.fromXYZ(
+								Math.multiply(
+									cameraToXYZ_D50,
+									crop(processRawSensorLevels(readSensorLevels(strip, j*pixelSize, ifd.getByteOrder())))
+								)
+						)
+					);
 		}
 
 	}
 
 	/*
+	 * We may want to use raw sensor data to recover info otherwise discarded when converting to CIE 1931 XYZ. These methods
+	 * provide extension points for subclasses that might want to do this.
+	 */
+	protected double[] processRawSensorLevels(double[] sensorLevels) { return sensorLevels; }
+
+	protected double[] processConvertedPixel(double[] pixel) { return pixel; }
+
+	/*
 	 * Saturation is reached when sensor level exceeds its analog cameraNeutral channel, not its own physical saturation
 	 * limit, otherwise it's up to the transformation matrix whether hues will be preserved when sensorLevels > cameraNeutral.
 	 */
-	protected double[] trim(double[] sensorLevels) {
+	private double[] crop(double[] sensorLevels) {
 		for (int i = 0; i < sensorLevels.length; i++) if (sensorLevels[i] > cameraNeutral[i]) sensorLevels[i] = cameraNeutral[i];
 		return sensorLevels;
 	}

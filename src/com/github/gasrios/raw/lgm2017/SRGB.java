@@ -21,7 +21,7 @@ import javax.imageio.ImageIO;
 import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.formats.ImageSRGB;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
+import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
 import com.github.gasrios.raw.swing.DisplayableImage;
 import com.github.gasrios.raw.swing.ImageFrame;
@@ -30,7 +30,7 @@ import com.github.gasrios.raw.swing.ImageFrame;
  * Compare to B&W correct brightness increase.
  */
 
-public class SRGB extends LinearChunkyUncompressedDNG {
+public class SRGB extends LinearChunkyUncompressedDngProcessor {
 
 	String fileName;
 

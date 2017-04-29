@@ -20,11 +20,11 @@ import javax.imageio.ImageIO;
 
 import com.github.gasrios.raw.formats.ImageLSH;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
+import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
 import com.github.gasrios.raw.swing.DisplayableImage;
 
-public class SaveImage extends LinearChunkyUncompressedDNG {
+public class SaveImage extends LinearChunkyUncompressedDngProcessor {
 
 	String fileName;
 

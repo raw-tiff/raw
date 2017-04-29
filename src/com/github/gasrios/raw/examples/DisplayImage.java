@@ -16,7 +16,7 @@ import java.io.FileInputStream;
 
 import com.github.gasrios.raw.formats.*;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
+import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
 import com.github.gasrios.raw.swing.DisplayableImage;
 import com.github.gasrios.raw.swing.ImageFrame;
@@ -25,22 +25,12 @@ import com.github.gasrios.raw.swing.ImageFrame;
  * Load and display image, without altering it in any way.
  */
 
-public class DisplayImage extends LinearChunkyUncompressedDNG {
+public class DisplayImage extends LinearChunkyUncompressedDngProcessor {
 
 	public DisplayImage(ImageCIEXYZ image) { super(image); }
 
+	@Override public void end() throws TiffProcessorException { new ImageFrame(new DisplayableImage(image), 1440, 900); }
+
 	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageCIEXYZ())).run(); }
-
-	@Override public void end() throws TiffProcessorException {
-
-		DisplayableImage imageSRGB = new DisplayableImage(image);
-
-		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
-		image = null;
-		System.gc();
-
-		new ImageFrame(imageSRGB, 1440, 900);
-
-	}
 
 }

@@ -36,7 +36,7 @@ import com.github.gasrios.raw.lang.TiffProcessorRuntimeException;
  * TODO assuming SamplesPerPixel = 3. See Tags ReductionMatrix1 and ReductionMatrix2.
  */
 
-public class CFAChunkyUncompressedDNG extends AbstractTiffProcessor {
+public class CFAChunkyUncompressedDngProcessor extends AbstractTiffProcessor {
 
 	protected	double[][][]	image;
 

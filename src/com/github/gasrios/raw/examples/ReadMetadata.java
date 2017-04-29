@@ -27,10 +27,6 @@ import com.github.gasrios.raw.processor.TiffProcessorEngine;
 
 public class ReadMetadata extends AbstractTiffProcessor {
 
-	public static void main(String[] args) throws Exception {
-		(new TiffProcessorEngine(new FileInputStream(args[0]), new ReadMetadata())).run();
-	}
-
 	@Override public void ifd(ImageFileDirectory ifd) { System.out.println(); }
 
 	@Override public void firstIfd(ImageFileDirectory ifd) { System.out.println("First"); }
@@ -59,5 +55,7 @@ public class ReadMetadata extends AbstractTiffProcessor {
 	}
 
 	@Override public void xmpTag(String tag, String value) { System.out.println(tag + " = " + value); }
+
+	public static void main(String[] args) throws Exception { (new TiffProcessorEngine(new FileInputStream(args[0]), new ReadMetadata())).run(); }
 
 }

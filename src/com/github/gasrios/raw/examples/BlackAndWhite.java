@@ -17,7 +17,7 @@ import java.io.FileInputStream;
 import com.github.gasrios.raw.formats.*;
 import com.github.gasrios.raw.lang.ImageEditing;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
+import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
 import com.github.gasrios.raw.swing.DisplayableImage;
 import com.github.gasrios.raw.swing.ImageFrame;
@@ -26,28 +26,12 @@ import com.github.gasrios.raw.swing.ImageFrame;
  * Turn image to black and white, preserving perceived luminance.
  */
 
-public class BlackAndWhite extends LinearChunkyUncompressedDNG {
+public class BlackAndWhite extends LinearChunkyUncompressedDngProcessor {
 
 	public BlackAndWhite(ImageCIEXYZ image) { super(image); }
 
-	public static void main(String[] args) throws Exception {
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageCIEXYZ())).run();
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageCIELUV())).run();
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageCIELCH())).run();
-		new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageLSH())).run();
-		//new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageSRGB())).run();
-	}
+	@Override public void end() throws TiffProcessorException { new ImageFrame(new DisplayableImage(ImageEditing.blackAndWhite((ImageLSH) image)), 1440, 900); }
 
-	@Override public void end() throws TiffProcessorException {
-
-		DisplayableImage displayableImage = new DisplayableImage(ImageEditing.blackAndWhite((ImageLSH) image));
-
-		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
-		image = null;
-		System.gc();
-
-		new ImageFrame(displayableImage, 1075, 716);
-
-	}
+	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageLSH())).run(); }
 
 }
