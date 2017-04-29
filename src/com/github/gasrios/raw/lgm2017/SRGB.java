@@ -10,7 +10,7 @@
  * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-package com.github.gasrios.raw.examples.lgm2017;
+package com.github.gasrios.raw.lgm2017;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -18,9 +18,8 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import com.github.gasrios.raw.formats.ImageCIELCH;
 import com.github.gasrios.raw.formats.ImageCIEXYZ;
-import com.github.gasrios.raw.formats.ImageLSH;
+import com.github.gasrios.raw.formats.ImageSRGB;
 import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
@@ -31,11 +30,11 @@ import com.github.gasrios.raw.swing.ImageFrame;
  * Compare to B&W correct brightness increase.
  */
 
-public class LSH extends LinearChunkyUncompressedDNG {
+public class SRGB extends LinearChunkyUncompressedDNG {
 
 	String fileName;
 
-	public LSH(ImageCIEXYZ image, String fileName) {
+	public SRGB(ImageCIEXYZ image, String fileName) {
 		super(image);
 		this.fileName = fileName;
 	}
@@ -43,21 +42,36 @@ public class LSH extends LinearChunkyUncompressedDNG {
 	@Override public void end() throws TiffProcessorException {
 
 		//DisplayableImage displayableImage = new DisplayableImage(image);
-		//DisplayableImage displayableImage = new DisplayableImage(blackAndWhite(increaseBrightness((ImageLSH) image)));
-		DisplayableImage displayableImage = new DisplayableImage(saturate(increaseBrightness((ImageLSH) image), .25D));
+		DisplayableImage displayableImage = new DisplayableImage(increaseBrightness(blackAndWhite((ImageSRGB) image)));
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;
 		System.gc();
 
-		new ImageFrame("LSH", displayableImage, 1440, 900);
+		new ImageFrame("sRGB", displayableImage, 1440, 900);
 
 		try { ImageIO.write(displayableImage, "PNG", new File(fileName+".png")); }
 		catch (IOException e) { throw new TiffProcessorException(e); }
 
 	}
 
-	public static ImageLSH increaseBrightness(ImageLSH image) {
+	private ImageSRGB blackAndWhite(ImageSRGB image) {
+
+		double[][][] im = image.getImage();
+
+		for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) {
+			double average = 0D;
+			for (int k = 0; k < 3; k++) average += im[i][j][k];
+			average /= 3;
+			for (int k = 0; k < 3; k++) im[i][j][k] = average;
+		};
+
+		return image;
+
+	}
+
+	// Only works for B&W images.
+	private ImageSRGB increaseBrightness(ImageSRGB image) {
 
 		double[][][] im = image.getImage();
 		double min = Double.MAX_VALUE, max = Double.MIN_VALUE;
@@ -67,24 +81,15 @@ public class LSH extends LinearChunkyUncompressedDNG {
 			if (max < im[i][j][0]) max = im[i][j][0];
 		}
 
-		for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) im[i][j][0] = 100*(im[i][j][0]-min)/(max-min);
+		for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) {
+			double b = (im[i][j][0]-min)/(max-min);
+			for (int k = 0; k < 3; k ++) im[i][j][k] = b;
+		}
 
 		return image;
 
 	}
 
-	private ImageLSH blackAndWhite(ImageLSH image) {
-		double[][][] im = image.getImage();
-		for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) im[i][j][1] = 0;
-		return image;
-	}
-
-	public static ImageCIELCH saturate(ImageCIELCH image, double percentage) {
-		double[][][] im = image.getImage();
-		for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) im[i][j][1] *= (1 + percentage);
-		return image;
-	}
-
-	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new LSH(new ImageLSH(), args[0])).run(); }
+	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new SRGB(new ImageSRGB(), args[0])).run(); }
 
 }

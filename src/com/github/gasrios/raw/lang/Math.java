@@ -41,12 +41,18 @@ import com.github.gasrios.raw.data.Illuminant;
  * CIE 1976 (L*, a*, b*) was not tested and does not look promising, given it has no saturation definition.
  *
  * One option is to replace chroma with saturation (C/L) in LChuv. The resulting LSH color space is not formally specified
- * but seems closer to providing linearly independent dimensions than any other CIE color space.
+ * but seems closer to providing "linearly independent" dimensions than any other CIE color space.
  *
  * FIXME LSH still suffers from one major drawback: saturation is neither normalized nor bounded.
  */
 
 public final class Math {
+
+	/*
+	 * Generic functions that might be helpful elsewhere too.
+	 */
+
+	public static double normalize(double value, double min, double max) { return value < min? 0 : value > max? 1 : (value-min)/(max-min); }
 
 	/*
 	 * Camera to CIE 1931 XYZ
@@ -210,8 +216,8 @@ public final class Math {
 	private static double interpolationWeightingFactor(double[] xy, int calibrationIlluminant1, int calibrationIlluminant2) {
 		return
 			1D - normalize(
-				1/ILLUMINANTS.get(calibrationIlluminant2).cct,
 				1/cct(xy),
+				1/ILLUMINANTS.get(calibrationIlluminant2).cct,
 				1/ILLUMINANTS.get(calibrationIlluminant1).cct
 			);
 	}
@@ -221,8 +227,6 @@ public final class Math {
 		double n = (chromaticityCoordinates[0] - 0.3320D)/(chromaticityCoordinates[1] - 0.1858D);
 		return -449D*java.lang.Math.pow(n, 3D) + 3525D*java.lang.Math.pow(n, 2D) - 6823.3D*n + 5520.33D;
 	}
-
-	public static double normalize(double b, double m, double t) { return m < b? 0 : m > t? 1 : (m-b)/(t-b); }
 
 	/*
 	 * See Digital Negative Specification Version 1.4.0.0, page 79.

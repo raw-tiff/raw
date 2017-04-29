@@ -39,7 +39,7 @@ public class DisplayImage extends LinearChunkyUncompressedDNG {
 		image = null;
 		System.gc();
 
-		new ImageFrame(imageSRGB, 1075, 716);
+		new ImageFrame(imageSRGB, 1440, 900);
 
 	}
 

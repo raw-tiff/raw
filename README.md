@@ -29,17 +29,19 @@ Keep in mind TIFF is a decades old file format that has been receiving extension
 - ISO 12234-2:2001, Electronic still-picture imaging – Removable memory – Part 2: TIFF/EP image data format
 - Digital Negative Specification Version 1.4.0.0
 
-** A note on color space **
+** Color spaces **
 
-The internal color space used is a variant of LChuv, the cylindrical representation of CIE 1976 (L*, u*, v*), with chroma replaced with saturation (C/L).
+The following color spaces are currently supported:
 
-This color space has the advantage of providing mathematical definitions of "luminance", "saturation" and "hue" good enough to make transformations in these dimensions linear independent (that is, changes in luminance will not affect neither saturation nor hue, for example, at least as far as human perception is concerned). This is really helpful for photo editing.
-
-See comments on class com.github.gasrios.raw.lang.Math for more information.
+- CIE 1931 XYZ
+- CIE 1976 (L*, u*, v*)
+- CIE LCHuv
+- sRGB
+- LSH (CIE LCHuv, with chroma C replaced with saturation S = C/L)
 
 ** Examples **
 
-See classes com.github.gasrios.raw.ReadMetadata and com.github.gasrios.raw.DisplayImage. Directory "sh" has scripts to run them from the command line in Unix based systems.
+See classes in package com.github.gasrios.raw.examples. Directory "sh" has scripts to run them from the command line in Unix based systems.
 
 ** The Code **
 

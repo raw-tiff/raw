@@ -12,36 +12,37 @@
 
 package com.github.gasrios.raw.examples;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 
-import com.github.gasrios.raw.formats.*;
-import com.github.gasrios.raw.lang.ImageEditing;
+import javax.imageio.ImageIO;
+
+import com.github.gasrios.raw.formats.ImageLSH;
 import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.processor.LinearChunkyUncompressedDNG;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
-import com.github.gasrios.raw.swing.ImageFrame;
 import com.github.gasrios.raw.swing.DisplayableImage;
 
-/*
- * Increase image saturation (makes it more colorful).
- */
+public class SaveImage extends LinearChunkyUncompressedDNG {
 
-public class Saturate extends LinearChunkyUncompressedDNG {
+	String fileName;
 
-	public Saturate(ImageCIEXYZ image) { super(image); }
-
-	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new Saturate(new ImageLSH())).run(); }
+	public SaveImage(ImageLSH image, String fileName) {
+		super(image);
+		this.fileName = fileName;
+	}
 
 	@Override public void end() throws TiffProcessorException {
 
-		DisplayableImage displayableImage = new DisplayableImage(ImageEditing.saturate((ImageLSH) image, 1D));
+		try {
 
-		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
-		image = null;
-		System.gc();
+			ImageIO.write(new DisplayableImage(image), "PNG", new File(fileName+".png"));
 
-		new ImageFrame(displayableImage, 1075, 716);
+		} catch (IOException e) { throw new TiffProcessorException(e); }
 
 	}
+
+	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new SaveImage(new ImageLSH(), args[0])).run(); }
 
 }
