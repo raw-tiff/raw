@@ -32,8 +32,9 @@ public class ImageCIEXYZ {
 	/*
 	 * From http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
 	 *
-	 * This matrix accounts for the illuminant D50, while IEC 61966-2-1:1999 uses D65.
+	 * DNG uses the D50 illuminant, and this appears to be standard among raw formats.
 	 */
+
 	protected static final double[][] XYZ_D50ToSRGB = new double[][] {
 		new double[] {  3.1338561D, -1.6168667D, -0.4906146D },
 		new double[] { -0.9787684D,  1.9161415D,  0.0334540D },
