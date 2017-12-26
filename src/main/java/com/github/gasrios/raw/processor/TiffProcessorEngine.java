@@ -17,12 +17,12 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
-import com.adobe.xmp.XMPException;
 import com.github.gasrios.raw.data.ImageFileDirectory;
 import com.github.gasrios.raw.data.ImageFileDirectoryLoader;
 import com.github.gasrios.raw.data.Tag;
 import com.github.gasrios.raw.io.TiffInputStream;
 import com.github.gasrios.raw.lang.TiffProcessorException;
+import com.github.gasrios.xmp.XMPException;
 
 /*
  * This class bridges the gap between (1) reading a TIFF file and making its information available in an easy to use fashion

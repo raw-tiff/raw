@@ -73,7 +73,7 @@ public class LSH extends LinearChunkyUncompressedDngProcessor {
 
 	}
 
-	private ImageLSH blackAndWhite(ImageLSH image) {
+	public ImageLSH blackAndWhite(ImageLSH image) {
 		double[][][] im = image.getImage();
 		for (int i = 0; i < im.length; i++) for (int j = 0; j < im[0].length; j ++) im[i][j][1] = 0;
 		return image;

@@ -19,14 +19,14 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.Vector;
 
-import com.adobe.xmp.XMPException;
-import com.adobe.xmp.XMPMeta;
-import com.adobe.xmp.XMPMetaFactory;
-import com.adobe.xmp.properties.XMPPropertyInfo;
 import com.github.gasrios.raw.io.TiffInputStream;
-import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.lang.RATIONAL;
 import com.github.gasrios.raw.lang.SRATIONAL;
+import com.github.gasrios.raw.lang.TiffProcessorException;
+import com.github.gasrios.xmp.XMPException;
+import com.github.gasrios.xmp.XMPMeta;
+import com.github.gasrios.xmp.XMPMetaFactory;
+import com.github.gasrios.xmp.properties.XMPPropertyInfo;
 
 /*
  * Straightforward transformations are applied here, when we can assume they are sensible:
