@@ -60,17 +60,16 @@ Class `com.github.gasrios.raw.processor.TiffProcessorEngine` uses `ImageFileDire
 
 ### Understanding the core
 
-`com.github.gasrios.raw.processor.TiffProcessorEngine
-	uses com.github.gasrios.raw.processor.TiffProcessor
-		implemented by com.github.gasrios.raw.processor.AbstractDngProcessor
-	uses com.github.gasrios.raw.data.ImageFileDirectoryLoader
-		uses com.github.gasrios.raw.data.Tag
-		uses com.github.gasrios.raw.data.Type
-		uses com.github.gasrios.raw.io.TiffInputStream
-
-com.github.gasrios.raw.lang.TiffNumber
-	extended by com.github.gasrios.raw.lang.RATIONAL
-	extended by com.github.gasrios.raw.lang.SRATIONAL`
+	com.github.gasrios.raw.processor.TiffProcessorEngine
+		uses com.github.gasrios.raw.processor.TiffProcessor
+			implemented by com.github.gasrios.raw.processor.AbstractDngProcessor
+		uses com.github.gasrios.raw.data.ImageFileDirectoryLoader
+			uses com.github.gasrios.raw.data.Tag
+			uses com.github.gasrios.raw.data.Type
+			uses com.github.gasrios.raw.io.TiffInputStream
+	com.github.gasrios.raw.lang.TiffNumber
+		extended by com.github.gasrios.raw.lang.RATIONAL
+		extended by com.github.gasrios.raw.lang.SRATIONAL
 
 ## Non Core
 
@@ -80,12 +79,11 @@ Class com.github.gasrios.raw.LoadHighResolutionImage provides a TiffProcessor th
 
 ## Understanding image editing
 
-`com.github.gasrios.raw.LoadHighResolutionImage
-	extends com.github.gasrios.raw.processor.AbstractDngProcessor
-
-com.github.gasrios.raw.lang.Math
-	used by com.github.gasrios.raw.display.ImageSRGB
-	used by com.github.gasrios.raw.LoadHighResolutionImage`
+	com.github.gasrios.raw.LoadHighResolutionImage
+		extends com.github.gasrios.raw.processor.AbstractDngProcessor
+	com.github.gasrios.raw.lang.Math
+		used by com.github.gasrios.raw.display.ImageSRGB
+		used by com.github.gasrios.raw.LoadHighResolutionImage
 
 # Copyright & License
 
