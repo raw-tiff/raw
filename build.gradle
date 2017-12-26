@@ -6,7 +6,6 @@ repositories {
 
 apply plugin: 'java'
 apply plugin: 'application'
-apply plugin: 'eclipse'
 
 dependencies {
 	compile 'com.github.gasrios.xmp:xmpcore:5.1.3'
