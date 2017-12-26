@@ -56,7 +56,7 @@ Class `com.github.gasrios.raw.data.ImageFileDirectoryLoader`, which encapsulates
 
 ### Processor Engine
 
-Class `com.github.gasrios.raw.processor.TiffProcessorEngine` uses `ImageFileDirectoryLoader` to load an `ImageFileDirectory`, then navigates its contents and calls the methods defined in `class com.github.gasrios.raw.processor.TiffProcessor`. You implement this interface (or extend the abstract class `com.github.gasrios.raw.processor.AbstractTiffProcessor`, which provides empty implementations of methods you do not care about) to define the actions you want performed.
+Class `com.github.gasrios.raw.processor.TiffProcessorEngine` uses `ImageFileDirectoryLoader` to load an `ImageFileDirectory`, then navigates its contents and calls the methods defined in class `com.github.gasrios.raw.processor.TiffProcessor`. You implement this interface (or extend the abstract class `com.github.gasrios.raw.processor.AbstractTiffProcessor`, which provides empty implementations of methods you do not care about) to define the actions you want performed.
 
 ### Understanding the core
 
@@ -75,7 +75,7 @@ Class `com.github.gasrios.raw.processor.TiffProcessorEngine` uses `ImageFileDire
 
 "Non core" is concerned with the useful stuff.
 
-Class com.github.gasrios.raw.LoadHighResolutionImage provides a TiffProcessor that will load the image, then convert it to an agnostic format. Image editors will extend it, implement method end() and then consume the protected attribute "image".
+Class `com.github.gasrios.raw.LoadHighResolutionImage` provides a `TiffProcessor` that will load the image, then convert it to an agnostic format. Image editors will extend it, implement method end() and then consume the protected attribute "image".
 
 ## Understanding image editing
 
