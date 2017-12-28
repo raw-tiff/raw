@@ -20,16 +20,16 @@ import javax.imageio.ImageIO;
 
 import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
+import com.github.gasrios.raw.processor.DngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
-import com.github.gasrios.raw.swing.DisplayableImage;
+import com.github.gasrios.raw.swing.Image;
 import com.github.gasrios.raw.swing.ImageFrame;
 
 /*
  * Increase brightness will turn the image green. Compare with correct brightness increase.
  */
 
-public class CIEXYZ extends LinearChunkyUncompressedDngProcessor {
+public class CIEXYZ extends DngProcessor<ImageCIEXYZ> {
 
 	String fileName;
 
@@ -41,7 +41,7 @@ public class CIEXYZ extends LinearChunkyUncompressedDngProcessor {
 	@Override public void end() throws TiffProcessorException {
 
 		//DisplayableImage displayableImage = new DisplayableImage(image);
-		DisplayableImage displayableImage = new DisplayableImage(increaseBrightness(image));
+		Image displayableImage = new Image(increaseBrightness(image));
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;

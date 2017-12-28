@@ -8,7 +8,7 @@ apply plugin: 'java'
 apply plugin: 'application'
 
 dependencies {
-	compile 'com.github.gasrios.xmp:xmpcore:5.1.3'
+	compile 'com.github.gasrios.raw:raw-core:0.1.0'
 }
 
 mainClassName='com.github.gasrios.raw.examples.BlackAndWhite'

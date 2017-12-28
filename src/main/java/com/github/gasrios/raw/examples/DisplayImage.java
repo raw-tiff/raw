@@ -13,24 +13,29 @@
 package com.github.gasrios.raw.examples;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 
-import com.github.gasrios.raw.formats.*;
+import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
+import com.github.gasrios.raw.processor.DngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
-import com.github.gasrios.raw.swing.DisplayableImage;
+import com.github.gasrios.raw.swing.Image;
 import com.github.gasrios.raw.swing.ImageFrame;
 
 /*
  * Load and display image, without altering it in any way.
  */
 
-public class DisplayImage extends LinearChunkyUncompressedDngProcessor {
+public class DisplayImage extends DngProcessor<ImageCIEXYZ> {
 
 	public DisplayImage(ImageCIEXYZ image) { super(image); }
 
-	@Override public void end() throws TiffProcessorException { new ImageFrame(new DisplayableImage(image), 1440, 900); }
+	@Override public void end() throws TiffProcessorException {
+		new ImageFrame(new Image(image), 1440, 900);
+	}
 
-	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageCIEXYZ())).run(); }
+	public static void main(String[] args) throws IOException, TiffProcessorException {
+		new TiffProcessorEngine(new FileInputStream(args[0]), new DisplayImage(new ImageCIEXYZ())).run();
+	}
 
 }

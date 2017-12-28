@@ -19,23 +19,22 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 
 import com.github.gasrios.raw.formats.ImageCIELCH;
-import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.formats.ImageLSH;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
+import com.github.gasrios.raw.processor.DngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
-import com.github.gasrios.raw.swing.DisplayableImage;
+import com.github.gasrios.raw.swing.Image;
 import com.github.gasrios.raw.swing.ImageFrame;
 
 /*
  * Compare to B&W correct brightness increase.
  */
 
-public class LSH extends LinearChunkyUncompressedDngProcessor {
+public class LSH extends DngProcessor<ImageLSH> {
 
 	String fileName;
 
-	public LSH(ImageCIEXYZ image, String fileName) {
+	public LSH(ImageLSH image, String fileName) {
 		super(image);
 		this.fileName = fileName;
 	}
@@ -44,7 +43,7 @@ public class LSH extends LinearChunkyUncompressedDngProcessor {
 
 		//DisplayableImage displayableImage = new DisplayableImage(image);
 		//DisplayableImage displayableImage = new DisplayableImage(blackAndWhite(increaseBrightness((ImageLSH) image)));
-		DisplayableImage displayableImage = new DisplayableImage(saturate(increaseBrightness((ImageLSH) image), .25D));
+		Image displayableImage = new Image(saturate(increaseBrightness((ImageLSH) image), .25D));
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;

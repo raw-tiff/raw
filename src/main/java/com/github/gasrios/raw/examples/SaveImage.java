@@ -18,31 +18,29 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
+import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.formats.ImageLSH;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
+import com.github.gasrios.raw.processor.DngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
-import com.github.gasrios.raw.swing.DisplayableImage;
+import com.github.gasrios.raw.swing.Image;
 
-public class SaveImage extends LinearChunkyUncompressedDngProcessor {
+public class SaveImage extends DngProcessor<ImageCIEXYZ> {
 
-	String fileName;
+	String name;
 
-	public SaveImage(ImageLSH image, String fileName) {
+	public SaveImage(ImageCIEXYZ image, String name) {
 		super(image);
-		this.fileName = fileName;
+		this.name = name;
 	}
 
 	@Override public void end() throws TiffProcessorException {
-
-		try {
-
-			ImageIO.write(new DisplayableImage(image), "PNG", new File(fileName+".png"));
-
-		} catch (IOException e) { throw new TiffProcessorException(e); }
-
+		try { ImageIO.write(new Image(image), "PNG", new File(name + ".png")); }
+		catch (IOException e) { throw new TiffProcessorException(e); }
 	}
 
-	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new SaveImage(new ImageLSH(), args[0])).run(); }
+	public static void main(String[] args) throws Exception {
+		new TiffProcessorEngine(new FileInputStream(args[0]), new SaveImage(new ImageLSH(), args[0])).run();
+	}
 
 }

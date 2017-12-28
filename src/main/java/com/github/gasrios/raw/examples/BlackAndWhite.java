@@ -13,25 +13,30 @@
 package com.github.gasrios.raw.examples;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 
-import com.github.gasrios.raw.formats.*;
-import com.github.gasrios.raw.lang.ImageEditing;
+import com.github.gasrios.raw.ImageEditing;
+import com.github.gasrios.raw.formats.ImageLSH;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
+import com.github.gasrios.raw.processor.DngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
-import com.github.gasrios.raw.swing.DisplayableImage;
+import com.github.gasrios.raw.swing.Image;
 import com.github.gasrios.raw.swing.ImageFrame;
 
 /*
  * Turn image to black and white, preserving perceived luminance.
  */
 
-public class BlackAndWhite extends LinearChunkyUncompressedDngProcessor {
+public class BlackAndWhite extends DngProcessor<ImageLSH> {
 
-	public BlackAndWhite(ImageCIEXYZ image) { super(image); }
+	public BlackAndWhite(ImageLSH image) { super(image); }
 
-	@Override public void end() throws TiffProcessorException { new ImageFrame(new DisplayableImage(ImageEditing.blackAndWhite((ImageLSH) image)), 1440, 900); }
+	@Override public void end() throws TiffProcessorException {
+		new ImageFrame(new Image(ImageEditing.blackAndWhite(image)), 1440, 900);
+	}
 
-	public static void main(String[] args) throws Exception { new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageLSH())).run(); }
+	public static void main(String[] args) throws IOException, TiffProcessorException {
+		new TiffProcessorEngine(new FileInputStream(args[0]), new BlackAndWhite(new ImageLSH())).run();
+	}
 
 }

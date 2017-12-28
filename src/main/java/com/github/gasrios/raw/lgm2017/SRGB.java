@@ -18,23 +18,22 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.formats.ImageSRGB;
 import com.github.gasrios.raw.lang.TiffProcessorException;
-import com.github.gasrios.raw.processor.LinearChunkyUncompressedDngProcessor;
+import com.github.gasrios.raw.processor.DngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
-import com.github.gasrios.raw.swing.DisplayableImage;
+import com.github.gasrios.raw.swing.Image;
 import com.github.gasrios.raw.swing.ImageFrame;
 
 /*
  * Compare to B&W correct brightness increase.
  */
 
-public class SRGB extends LinearChunkyUncompressedDngProcessor {
+public class SRGB extends DngProcessor<ImageSRGB> {
 
 	String fileName;
 
-	public SRGB(ImageCIEXYZ image, String fileName) {
+	public SRGB(ImageSRGB image, String fileName) {
 		super(image);
 		this.fileName = fileName;
 	}
@@ -42,7 +41,7 @@ public class SRGB extends LinearChunkyUncompressedDngProcessor {
 	@Override public void end() throws TiffProcessorException {
 
 		//DisplayableImage displayableImage = new DisplayableImage(image);
-		DisplayableImage displayableImage = new DisplayableImage(increaseBrightness(blackAndWhite((ImageSRGB) image)));
+		Image displayableImage = new Image(increaseBrightness(blackAndWhite((ImageSRGB) image)));
 
 		// Does not seem to make much of a difference in practice, but just in case let's try and free some memory here.
 		image = null;
