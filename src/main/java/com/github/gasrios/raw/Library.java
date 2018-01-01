@@ -12,12 +12,39 @@
 
 package com.github.gasrios.raw;
 
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.io.File;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+
 import com.github.gasrios.raw.formats.ImageCIELCH;
 import com.github.gasrios.raw.formats.ImageCIELUV;
+import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.formats.ImageSRGB;
 import com.github.gasrios.raw.lang.Math;
+import com.github.gasrios.raw.swing.Image;
+import com.github.gasrios.raw.swing.ImageFrame;
 
-public class ImageEditing {
+public final class Library {
+
+	public static void save(ImageCIEXYZ image, String name, String format) throws IOException {
+		ImageIO.write(new Image(image), format.toUpperCase(), new File(name + "." + format.toLowerCase()));
+	}
+
+	public static void display(ImageCIEXYZ image) {
+		GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+		display(
+			image,
+			device.getDisplayMode().getWidth(),
+			device.getDisplayMode().getHeight() - 50
+		);
+	}
+
+	public static void display(ImageCIEXYZ image, int width, int height) {
+		new ImageFrame(new Image(image), width, height);
+	}
 
 	public static ImageSRGB blackAndWhite(ImageSRGB image) {
 
@@ -80,5 +107,7 @@ public class ImageEditing {
 		return image;
 
 	}
+
+	private Library() {}
 
 }

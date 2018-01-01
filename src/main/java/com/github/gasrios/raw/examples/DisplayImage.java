@@ -15,12 +15,11 @@ package com.github.gasrios.raw.examples;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import com.github.gasrios.raw.Library;
 import com.github.gasrios.raw.formats.ImageCIEXYZ;
 import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.processor.DngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
-import com.github.gasrios.raw.swing.Image;
-import com.github.gasrios.raw.swing.ImageFrame;
 
 /*
  * Load and display image, without altering it in any way.
@@ -31,7 +30,7 @@ public class DisplayImage extends DngProcessor<ImageCIEXYZ> {
 	public DisplayImage(ImageCIEXYZ image) { super(image); }
 
 	@Override public void end() throws TiffProcessorException {
-		new ImageFrame(new Image(image), 1440, 900);
+		Library.display(image);
 	}
 
 	public static void main(String[] args) throws IOException, TiffProcessorException {

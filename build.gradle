@@ -1,14 +1,45 @@
+buildscript {
+	repositories {
+		jcenter()
+	}
+	dependencies {
+		classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'java-library'
+apply plugin: 'maven'
+apply plugin: 'com.jfrog.bintray'
+
 repositories {
 	maven {
 		url "https://dl.bintray.com/gasrios/maven"
 	}
 }
 
-apply plugin: 'java'
-apply plugin: 'application'
-
 dependencies {
 	compile 'com.github.gasrios.raw:raw-core:0.1.0'
 }
 
-mainClassName='com.github.gasrios.raw.examples.BlackAndWhite'
+jar.baseName = 'raw'
+
+group	= 'com.github.gasrios.raw'
+version	= '0.0.1'
+
+bintray {
+	user	= project.property('bintrayUser')
+	key		= project.property('bintrayApiKey')
+	dryRun	= true
+	publish	= false
+	configurations = ['archives']
+	pkg {
+		repo		= 'maven'
+		name		= 'raw'
+		licenses	= ['GPL-3.0']
+		vcsUrl		= 'https://github.com/gasrios/raw.git'
+	}
+}
+
+mainClassName='com.github.gasrios.raw.ImageEditor'

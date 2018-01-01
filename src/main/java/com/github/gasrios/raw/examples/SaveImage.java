@@ -12,18 +12,14 @@
 
 package com.github.gasrios.raw.examples;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import javax.imageio.ImageIO;
-
+import com.github.gasrios.raw.Library;
 import com.github.gasrios.raw.formats.ImageCIEXYZ;
-import com.github.gasrios.raw.formats.ImageLSH;
 import com.github.gasrios.raw.lang.TiffProcessorException;
 import com.github.gasrios.raw.processor.DngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
-import com.github.gasrios.raw.swing.Image;
 
 public class SaveImage extends DngProcessor<ImageCIEXYZ> {
 
@@ -35,12 +31,15 @@ public class SaveImage extends DngProcessor<ImageCIEXYZ> {
 	}
 
 	@Override public void end() throws TiffProcessorException {
-		try { ImageIO.write(new Image(image), "PNG", new File(name + ".png")); }
-		catch (IOException e) { throw new TiffProcessorException(e); }
+		try {
+			Library.save(image, name, "PNG");
+		} catch (IOException e) {
+			throw new TiffProcessorException(e);
+		}
 	}
 
 	public static void main(String[] args) throws Exception {
-		new TiffProcessorEngine(new FileInputStream(args[0]), new SaveImage(new ImageLSH(), args[0])).run();
+		new TiffProcessorEngine(new FileInputStream(args[0]), new SaveImage(new ImageCIEXYZ(), args[0])).run();
 	}
 
 }
