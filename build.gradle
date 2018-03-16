@@ -26,13 +26,14 @@ dependencies {
 jar.baseName = 'raw'
 
 group	= 'com.github.gasrios.raw'
-version	= '0.0.1'
+version	= project.property('version')
 
 bintray {
-	user	= project.property('bintrayUser')
-	key		= project.property('bintrayApiKey')
-	dryRun	= true
-	publish	= false
+	user		= project.property('bintrayUser')
+	key			= project.property('bintrayApiKey')
+	dryRun		= true
+	publish		= false
+	override	= false
 	configurations = ['archives']
 	pkg {
 		repo		= 'maven'
