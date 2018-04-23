@@ -4,6 +4,7 @@ buildscript {
 	}
 	dependencies {
 		classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
+		classpath 'com.netflix.nebula:nebula-release-plugin:6.0.0'
 	}
 }
 
@@ -12,6 +13,12 @@ apply plugin: 'application'
 apply plugin: 'java-library'
 apply plugin: 'maven'
 apply plugin: 'com.jfrog.bintray'
+apply plugin: 'nebula.release'
+
+release {
+	// Change default versioning strategy to maven style -SNAPSHOT, instead of nebula's devSnapshot
+	defaultVersionStrategy = org.ajoberstar.gradle.git.release.opinion.Strategies.SNAPSHOT
+}
 
 repositories {
 	maven {
