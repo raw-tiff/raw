@@ -37,7 +37,7 @@ group	= 'com.github.gasrios.raw'
 bintray {
 	user		= project.property('bintrayUser')
 	key			= project.property('bintrayApiKey')
-	dryRun		= true
+	dryRun		= false
 	publish		= true
 	override	= false
 	configurations = ['archives']
