@@ -8,12 +8,12 @@ buildscript {
 	}
 }
 
-apply plugin: 'java'
-apply plugin: 'application'
 apply plugin: 'java-library'
 apply plugin: 'maven'
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'nebula.release'
+apply plugin: 'java'
+apply plugin: 'application'
 
 release {
 	// Change default versioning strategy to maven style -SNAPSHOT, instead of nebula's devSnapshot
@@ -27,19 +27,18 @@ repositories {
 }
 
 dependencies {
-	compile 'com.github.gasrios.raw:raw-core:0.1.0'
+	compile 'com.github.gasrios.raw:raw-core:+'
 }
 
 jar.baseName = 'raw'
 
 group	= 'com.github.gasrios.raw'
-version	= project.property('version')
 
 bintray {
 	user		= project.property('bintrayUser')
 	key			= project.property('bintrayApiKey')
 	dryRun		= true
-	publish		= false
+	publish		= true
 	override	= false
 	configurations = ['archives']
 	pkg {
