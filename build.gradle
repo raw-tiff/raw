@@ -22,7 +22,7 @@ release {
 
 repositories {
 	maven {
-		url "https://dl.bintray.com/gasrios/maven"
+		url 'https://dl.bintray.com/gasrios/maven'
 	}
 }
 
@@ -30,17 +30,13 @@ dependencies {
 	compile 'com.github.gasrios.raw:raw-core:+'
 }
 
-jar.baseName = 'raw'
-
-group	= 'com.github.gasrios.raw'
-
 bintray {
-	user		= project.property('bintrayUser')
-	key			= project.property('bintrayApiKey')
-	dryRun		= false
-	publish		= true
-	override	= false
-	configurations = ['archives']
+	user			= project.property('bintrayUser')
+	key				= project.property('bintrayApiKey')
+	dryRun			= false
+	publish			= true
+	override		= true
+	configurations	= ['archives']
 	pkg {
 		repo		= 'maven'
 		name		= 'raw'
@@ -49,4 +45,6 @@ bintray {
 	}
 }
 
-mainClassName='com.github.gasrios.raw.ImageEditor'
+jar.baseName	= 'raw'
+group			= 'com.github.gasrios.raw'
+mainClassName	= 'com.github.gasrios.raw.ImageEditor'
