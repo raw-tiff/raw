@@ -21,12 +21,12 @@ import com.github.gasrios.raw.processor.DngProcessor;
 import com.github.gasrios.raw.processor.TiffProcessorEngine;
 import com.github.gasrios.xmp.XMPException;
 
-public class ImageEditor extends DngProcessor<ImageLSH> {
+public class CommandLineInvoker extends DngProcessor<ImageLSH> {
 
 	private Editor editor;
 
-	public ImageEditor(ImageLSH image, Editor editor) {
-		super(image);
+	public CommandLineInvoker(Editor editor) {
+		super(new ImageLSH());
 		this.editor = editor;
 	}
 
@@ -36,11 +36,8 @@ public class ImageEditor extends DngProcessor<ImageLSH> {
 
 	public static void main(String[] args) throws IOException, ReflectiveOperationException, TiffProcessorException, XMPException {
 		new TiffProcessorEngine(
-			new FileInputStream(args[0]),
-			new ImageEditor(
-				new ImageLSH(),
-				(Editor) Class.forName(args[1]).newInstance()
-			)
+			new FileInputStream(args[1]),
+			new CommandLineInvoker((Editor) Class.forName(args[0]).newInstance())
 		).run();
 	}
 
