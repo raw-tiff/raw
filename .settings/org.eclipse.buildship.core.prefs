@@ -1,8 +1,8 @@
-#Mon Dec 25 23:46:05 BRST 2017
-connection.gradle.distribution=GRADLE_DISTRIBUTION(WRAPPER)
-override.workspace.settings=true
-auto.sync=false
-gradle.user.home=
-connection.project.dir=
-offline.mode=false
+auto.sync=true
 build.scans.enabled=false
+connection.gradle.distribution=GRADLE_DISTRIBUTION(WRAPPER)
+connection.project.dir=
+eclipse.preferences.version=1
+gradle.user.home=/home/gasrios
+offline.mode=false
+override.workspace.settings=true
