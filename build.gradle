@@ -12,11 +12,8 @@ apply plugin: 'java-library'
 apply plugin: 'maven'
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'nebula.release'
-apply plugin: 'java'
-apply plugin: 'application'
 
 release {
-	// Change default versioning strategy to maven style -SNAPSHOT, instead of nebula's devSnapshot
 	defaultVersionStrategy = org.ajoberstar.gradle.git.release.opinion.Strategies.SNAPSHOT
 }
 
@@ -27,7 +24,7 @@ repositories {
 }
 
 dependencies {
-	compile 'com.github.gasrios.raw:raw-core:+'
+	compile 'com.github.gasrios.xmp:xmp-core:5.1.3-raw'
 }
 
 bintray {
@@ -47,4 +44,3 @@ bintray {
 
 jar.baseName	= 'raw'
 group			= 'com.github.gasrios.raw'
-mainClassName	= 'com.github.gasrios.raw.ImageEditor'

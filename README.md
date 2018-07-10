@@ -19,23 +19,63 @@ Keep in mind TIFF is a decades old file format that has been receiving extension
 * ISO 12234-2:2001, Electronic still-picture imaging – Removable memory – Part 2: TIFF/EP image data format
 * [Digital Negative Specification Version 1.4.0.0](https://wwwimages2.adobe.com/content/dam/acom/en/products/photoshop/pdfs/dng_spec_1.4.0.0.pdf)
 
+# Supported color spaces
+
+* [CIE 1931 XYZ](https://en.wikipedia.org/wiki/CIE_1931_color_space)
+* [CIE 1976 (L*, u*, v*)](https://en.wikipedia.org/wiki/CIELUV)
+* [CIE LCHuv](https://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation_(CIELCH))
+* [sRGB](https://en.wikipedia.org/wiki/SRGB)
+* LSH (CIE LCHuv, with chroma C replaced with saturation S = C/L)
+
 # The Code
 
-At the highest level code is split in two parts: "Image Editing" (this project) and "[Core](https://github.com/gasrios/raw-core)".
+	com.github.gasrios.raw.processor.TiffProcessorEngine
+		uses com.github.gasrios.raw.processor.TiffProcessor
+			implemented by com.github.gasrios.raw.processor.AbstractTiffProcessor
+				extended by com.github.gasrios.raw.processor.DngProcessor
+					extended by com.github.gasrios.raw.editor.CommandLineInvoker
+						uses com.github.gasrios.raw.editor.Editor
 
-## Understanding image editing
+	com.github.gasrios.raw.editor.Library
 
-	com.github.gasrios.raw.LoadHighResolutionImage
-		extends com.github.gasrios.raw.processor.AbstractDngProcessor
-	com.github.gasrios.raw.lang.Math
-		used by com.github.gasrios.raw.display.ImageSRGB
-		used by com.github.gasrios.raw.LoadHighResolutionImage
+## com.github.gasrios.raw.processor.TiffProcessorEngine
 
-Class `com.github.gasrios.raw.LoadHighResolutionImage` provides a `TiffProcessor` that will load the image, then convert it to an agnostic format. Image editors will extend it, implement method end() and then consume the protected attribute "image".
+Bridges the gap between (1) reading a TIFF file (see `com.github.gasrios.raw.data.ImageFileDirectoryLoader` and `com.github.gasrios.raw.io.TiffInputStream`) and making its information available in an easy to use fashion (see `com.github.gasrios.raw.data.ImageFileDirectory`) and (2) writing code that actually processes this information.
+
+## com.github.gasrios.raw.processor.TiffProcessor
+
+This interface provides consumer methods called by TiffProcessorEngine when content is available and ready to be processed. By implementing this interface you can manipulate TIFF images as you see fit.
+
+## com.github.gasrios.raw.processor.AbstractTiffProcessor
+
+Provides empty implementations of `com.github.gasrios.raw.processor.TiffProcessor` methods you do not care about, so you can only focus on the stuff you need.
+
+## com.github.gasrios.raw.processor.DngProcessor
+
+This class makes all transformations deemed too complex to be at `com.github.gasrios.raw.data.ImageFileDirectoryLoader` when processing the high resolution image IFD:
+
+1. Reads image strips and converts them to a width X height pixel matrix;
+2. Converts camera coordinates to XYZ D50 values;
+
+This pretty much ends all the dirty work needed to read the TIFF file, and makes its information available to people whose business is doing actual photo editing.
+
+## com.github.gasrios.raw.editor.CommandLineEditorInvoker
+
+`com.github.gasrios.raw.processor.DngProcessor` subclass that provides an easy to use command line caller for image editors.
+
+Usage: `java com.github.gasrios.raw.CommandLineEditorInvoker <AnEditor implements com.github.gasrios.raw.editor.Editor> image.dng`
+
+## com.github.gasrios.raw.editor.Editor
+
+A simples interface called from `com.github.gasrios.raw.editor.CommandLineEditorInvoker`. The point is to make image editing as simple as possible.
+
+## com.github.gasrios.raw.editor.Library
+
+Utility methods to save, display and manipulate images.
 
 # Examples
 
-See classes in package com.github.gasrios.raw.examples. Directory "sh" has scripts to run them from the command line in Unix based systems.
+See [raw-examples](https://github.com/gasrios/raw-examples).
 
 # Copyright & License
 

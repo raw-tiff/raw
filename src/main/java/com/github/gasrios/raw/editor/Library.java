@@ -10,7 +10,7 @@
  * You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-package com.github.gasrios.raw;
+package com.github.gasrios.raw.editor;
 
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
@@ -26,6 +26,10 @@ import com.github.gasrios.raw.formats.ImageSRGB;
 import com.github.gasrios.raw.lang.Math;
 import com.github.gasrios.raw.swing.Image;
 import com.github.gasrios.raw.swing.ImageFrame;
+
+/*
+ * Utility methods to save, display and manipulate images.
+ */
 
 public final class Library {
 
