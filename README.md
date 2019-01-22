@@ -1,5 +1,3 @@
-![Diagram](https://github.com/gasrios/raw/diagram.png)
-
 # raw
 
 This is not a production ready raw reader, just a personal project I started while studying digital image processing. If you need a complete, fully functional library, check [dcraw](https://www.cybercom.net/~dcoffin/dcraw/) out.
