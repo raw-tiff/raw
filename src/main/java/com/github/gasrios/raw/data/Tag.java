@@ -13,7 +13,7 @@
 package com.github.gasrios.raw.data;
 
 /*
- * This used to be an enum until the moment I found out the numeric identifiers were not unique for all scopes. For example,
+ * This used to be an enum until the moment I found out the numeric identifiers were not unique to all scopes. For example,
  * 1 can be the "InteroperabilityIndex" of an Interoperability IFD, or "GPSLatitudeRef", inside a GPS IFD.
  *
  * By then the simplest way to account for that was:
@@ -46,7 +46,7 @@ public class Tag implements Comparable<Tag> {
 		this.number = number;
 	}
 
-	@Override public final int compareTo(Tag tag) { return number - tag.number; }
+	@Override public final int compareTo(Tag otherTag) { return this.number - otherTag.number; }
 
 	@Override public final String toString() { return name; }
 
@@ -70,8 +70,13 @@ public class Tag implements Comparable<Tag> {
 	// DNG, page 20
 	public static final Tag	PhotometricInterpretation = new Tag("PhotometricInterpretation", 262);
 
+	// DNG, page 34
 	public static final Tag	ImageDescription = new Tag("ImageDescription", 270);
+
+	// DNG, page 35
 	public static final Tag	Make = new Tag("Make", 271);
+
+	// DNG, page 35
 	public static final Tag	Model = new Tag("Model", 272);
 
 	// TIFF, page 19
@@ -93,15 +98,25 @@ public class Tag implements Comparable<Tag> {
 	// TIFF, page 19
 	public static final Tag	StripByteCounts = new Tag("StripByteCounts", 279);
 
+	// TIFF, page 19
 	public static final Tag	XResolution = new Tag("XResolution", 282);
+
+	// TIFF, page 19
 	public static final Tag	YResolution = new Tag("YResolution", 283);
 
 	// TIFF, page 19
 	public static final Tag	PlanarConfiguration = new Tag("PlanarConfiguration", 284);
 
+	// TIFF, page 18
 	public static final Tag	ResolutionUnit = new Tag("ResolutionUnit", 296);
+
+	// TIFF, page 39
 	public static final Tag	Software = new Tag("Software", 305);
+
+	// TIFF, page 31
 	public static final Tag	DateTime = new Tag("DateTime", 306);
+
+	// TIFF, page 28
 	public static final Tag	Artist = new Tag("Artist", 315);
 
 	// TIFF, page 67
@@ -116,7 +131,10 @@ public class Tag implements Comparable<Tag> {
 	// TIFF, page 68
 	public static final Tag	TileByteCounts = new Tag("TileByteCounts", 325);
 
+	// TIFF/EP, page 21
 	public static final Tag	SubIFDs = new Tag("SubIFDs", 330);
+
+	// TIFF/EP, page 31
 	public static final Tag	JPEGTables = new Tag("JPEGTables", 347);
 
 	/*
@@ -133,6 +151,8 @@ public class Tag implements Comparable<Tag> {
 	 * description is for TIFF reading purposes only. 
 	 */
 	public static final Tag	JPEGInterchangeFormat = new Tag("JPEGInterchangeFormat", 513);
+
+	// TIFF, page 105
 	public static final Tag	JPEGInterchangeFormatLength = new Tag("JPEGInterchangeFormatLength", 514);
 
 	public static final Tag	YCbCrCoefficients = new Tag("YCbCrCoefficients", 529);

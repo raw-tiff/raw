@@ -306,7 +306,7 @@ public class TiffInputStream extends BufferedInputStream {
 		byte[] buffer = new byte[length - 1];
 		if (read(buffer) != length - 1) throw new EOFException();
 		if (read() != 0) throw new TiffProcessorException("Non null terminated string");
-		currentPosition+=length;
+		currentPosition += length;
 		return newString(buffer);
 	}
 
@@ -326,19 +326,19 @@ public class TiffInputStream extends BufferedInputStream {
 	public synchronized Tag readTag() throws TiffProcessorException, IOException {
 		int tag = readSHORT();
 		if (TAGS.containsKey(tag)) return TAGS.get(tag);
-		else return new Tag(""+tag, tag);
+		else return new Tag(Integer.toString(tag), tag);
 	}
 
 	public synchronized InteroperabilityTag readInteroperabilityTag() throws TiffProcessorException, IOException {
 		int tag = readSHORT();
 		if (INTEROPERABILITY_TAGS.containsKey(tag)) return INTEROPERABILITY_TAGS.get(tag);
-		else return new InteroperabilityTag(""+tag, tag);
+		else return new InteroperabilityTag(Integer.toString(tag), tag);
 	}
 
 	public synchronized MakerNoteTag readMakerNoteTag() throws TiffProcessorException, IOException {
 		int tag = readSHORT();
 		if (MAKERNOTE_TAGS.containsKey(tag)) return MAKERNOTE_TAGS.get(tag);
-		else return new CanonMakerNoteTag(""+tag, tag);
+		else return new CanonMakerNoteTag(Integer.toString(tag), tag);
 	}
 
 	public synchronized Type readType() throws TiffProcessorException, IOException {

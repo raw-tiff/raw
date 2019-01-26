@@ -15,7 +15,7 @@ package com.github.gasrios.raw.editor;
 import com.github.gasrios.raw.formats.ImageLSH;
 
 /*
- * A simples interface called from com.github.gasrios.raw.editor.CommandLineEditorInvoker. The point is to make image editing as simple as possible.
+ * A simple interface called from com.github.gasrios.raw.editor.CommandLineEditorInvoker. The point is to make image editing as simple as possible.
  */
 
 public interface Editor {

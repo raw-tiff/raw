@@ -23,7 +23,7 @@ Keep in mind TIFF is a decades old file format that has been receiving extension
 
 * [CIE 1931 XYZ](https://en.wikipedia.org/wiki/CIE_1931_color_space)
 * [CIE 1976 (L*, u*, v*)](https://en.wikipedia.org/wiki/CIELUV)
-* [CIE LCHuv](https://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation_(CIELCH))
+* [CIE LCHuv](https://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation_(CIELCH)
 * [sRGB](https://en.wikipedia.org/wiki/SRGB)
 * LSH (CIE LCHuv, with chroma C replaced with saturation S = C/L)
 
@@ -67,7 +67,7 @@ Usage: `java com.github.gasrios.raw.CommandLineEditorInvoker <AnEditor implement
 
 ## com.github.gasrios.raw.editor.Editor
 
-A simples interface called from `com.github.gasrios.raw.editor.CommandLineEditorInvoker`. The point is to make image editing as simple as possible.
+A simple interface called from `com.github.gasrios.raw.editor.CommandLineEditorInvoker`. The point is to make image editing as simple as possible.
 
 ## com.github.gasrios.raw.editor.Library
 
