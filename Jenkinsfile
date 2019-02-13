@@ -9,7 +9,7 @@ pipeline {
 			steps {
 				sh 'printenv'
 				echo "--"
-				def creds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+				creds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
 					com.cloudbees.plugins.credentials.common.StandardUsernameCredentials.class,
 					Jenkins.instance,
 					null,
