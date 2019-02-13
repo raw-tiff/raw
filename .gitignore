@@ -1,3 +1,6 @@
 .gradle
 build/
 bin/
+IMG_*
+src/main/java/com/github/gasrios/raw/test/
+test.sh
