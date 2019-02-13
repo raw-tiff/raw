@@ -7,15 +7,17 @@ pipeline {
 		stage('test') {
 
 			steps {
-				echo "${CHANGE_ID}"
-				echo "${CHANGE_URL}"
-				echo "${CHANGE_TITLE}"
-				echo "${CHANGE_AUTHOR}"
-				echo "${CHANGE_AUTHOR_DISPLAY_NAME}"
-				echo "${CHANGE_AUTHOR_EMAIL}"
-				echo "${CHANGE_TARGET}"
-				echo "--"
 				sh 'printenv'
+				echo "--"
+				def creds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+					com.cloudbees.plugins.credentials.common.StandardUsernameCredentials.class,
+					Jenkins.instance,
+					null,
+					null
+				);
+				for (c in creds) {
+					 println(c.id + ": " + c.description)
+				}
 			}
 
 		}
