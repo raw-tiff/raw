@@ -3,7 +3,7 @@ pipeline {
 	agent any
 
 	environment {
-	    release_type = ${GIT_LOCAL_BRANCH == 'master'? 'final' : 'candidate'}
+	    release_type = "${GIT_LOCAL_BRANCH == 'master'? 'final' : 'candidate'}"
 
 	}
 
