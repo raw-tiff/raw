@@ -13,6 +13,7 @@ pipeline {
 
 			steps {
 				echo "GIT_LOCAL_BRANCH: $GIT_LOCAL_BRANCH"
+
 				echo "release_type: $release_type"
 			}
 
