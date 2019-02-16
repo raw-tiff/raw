@@ -3,17 +3,17 @@ pipeline {
 	agent any
 
 	environment {
-	    release_type = "${GIT_LOCAL_BRANCH == 'master'? 'final' : 'candidate'}"
-
+		//BINTRAY_API_KEY = credentials("BINTRAY_API_KEY")
+		RELEASE_TYPE = "${GIT_LOCAL_BRANCH == 'master'? 'final' : 'candidate'}"
 	}
 
 	stages {
 
-		stage('test') {
+		stage('publish') {
 
 			steps {
-				echo "GIT_LOCAL_BRANCH: $GIT_LOCAL_BRANCH"
-				echo "release_type: $release_type"
+				//sh "./gradlew clean $RELEASE_TYPE bintrayUpload -PbintrayApiKey=$BINTRAY_API_KEY"
+				sh "./gradlew --info clean $RELEASE_TYPE"
 			}
 
 		}
