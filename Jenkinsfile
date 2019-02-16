@@ -13,7 +13,7 @@ pipeline {
 
 			steps {
 				//sh "./gradlew clean $RELEASE_TYPE bintrayUpload -PbintrayApiKey=$BINTRAY_API_KEY"
-				sh "./gradlew --info clean $RELEASE_TYPE"
+				echo "./gradlew --info clean $RELEASE_TYPE"
 			}
 
 		}
