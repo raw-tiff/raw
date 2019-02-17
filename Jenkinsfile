@@ -1,6 +1,6 @@
 pipeline {
 
-	agent any
+	agent { label 'jenkins-slave-01' }
 
 	environment {
 		GITHUB_ID = credentials("GITHUB_ID")
@@ -10,15 +10,14 @@ pipeline {
 	}
 
 	stages {
-
 		stage('publish') {
-
 			steps {
-				sh "./gradlew --info clean -Dorg.ajoberstar.grgit.auth.username=$GITHUB_ID -Dorg.ajoberstar.grgit.auth.password=$GITHUB_TOKEN $RELEASE_TYPE -PbintrayApiKey=$BINTRAY_API_KEY bintrayUpload"
+				sh "./gradlew " +
+						"clean " +
+						"-Dorg.ajoberstar.grgit.auth.username=$GITHUB_ID -Dorg.ajoberstar.grgit.auth.password=$GITHUB_TOKEN $RELEASE_TYPE " +
+						"-PbintrayApiKey=$BINTRAY_API_KEY bintrayUpload"
 			}
-
 		}
-
 	}
 
 }
