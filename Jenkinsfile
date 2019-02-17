@@ -1,6 +1,6 @@
 pipeline {
 
-	agent jenkins-slave-01
+	agent { label 'jenkins-slave-01' }
 
 	environment {
 		GITHUB_TOKEN = credentials("GITHUB_TOKEN")
