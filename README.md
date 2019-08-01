@@ -10,7 +10,7 @@ You can use [Adobe Camera Raw and DNG Converter](https://www.adobe.com/support/d
 
 I am looking for contributors willing to help me implement support for reading nonlinear compressed data. While uncompressed linear is specific to DNG, nonlinear compressed is the same format used by Canon and Nikon.
 
-# Before you begin
+## Before you begin
 
 Keep in mind TIFF is a decades old file format that has been receiving extensions for as long as has existed. It's full of idiosyncrasies and I strongly encourage you to read the following specifications before proceeding:
 
@@ -19,15 +19,15 @@ Keep in mind TIFF is a decades old file format that has been receiving extension
 * ISO 12234-2:2001, Electronic still-picture imaging – Removable memory – Part 2: TIFF/EP image data format
 * [Digital Negative Specification Version 1.4.0.0](https://wwwimages2.adobe.com/content/dam/acom/en/products/photoshop/pdfs/dng_spec_1.4.0.0.pdf)
 
-# Supported color spaces
+## Supported color spaces
 
 * [CIE 1931 XYZ](https://en.wikipedia.org/wiki/CIE_1931_color_space)
 * [CIE 1976 (L*, u*, v*)](https://en.wikipedia.org/wiki/CIELUV)
-* [CIE LCHuv](https://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation_(CIELCH)
+* [CIE LCHuv](https://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation_(CIELCH))
 * [sRGB](https://en.wikipedia.org/wiki/SRGB)
 * LSH (CIE LCHuv, with chroma C replaced with saturation S = C/L)
 
-# The Code
+## The Code
 
 	com.github.gasrios.raw.processor.TiffProcessorEngine
 		uses com.github.gasrios.raw.processor.TiffProcessor
@@ -38,19 +38,19 @@ Keep in mind TIFF is a decades old file format that has been receiving extension
 
 	com.github.gasrios.raw.editor.Library
 
-## com.github.gasrios.raw.processor.TiffProcessorEngine
+### com.github.gasrios.raw.processor.TiffProcessorEngine
 
 Bridges the gap between (1) reading a TIFF file (see `com.github.gasrios.raw.data.ImageFileDirectoryLoader` and `com.github.gasrios.raw.io.TiffInputStream`) and making its information available in an easy to use fashion (see `com.github.gasrios.raw.data.ImageFileDirectory`) and (2) writing code that actually processes this information.
 
-## com.github.gasrios.raw.processor.TiffProcessor
+### com.github.gasrios.raw.processor.TiffProcessor
 
 This interface provides consumer methods called by TiffProcessorEngine when content is available and ready to be processed. By implementing this interface you can manipulate TIFF images as you see fit.
 
-## com.github.gasrios.raw.processor.AbstractTiffProcessor
+### com.github.gasrios.raw.processor.AbstractTiffProcessor
 
 Provides empty implementations of `com.github.gasrios.raw.processor.TiffProcessor` methods you do not care about, so you can only focus on the stuff you need.
 
-## com.github.gasrios.raw.processor.DngProcessor
+### com.github.gasrios.raw.processor.DngProcessor
 
 This class makes all transformations deemed too complex to be at `com.github.gasrios.raw.data.ImageFileDirectoryLoader` when processing the high resolution image IFD:
 
@@ -59,25 +59,25 @@ This class makes all transformations deemed too complex to be at `com.github.gas
 
 This pretty much ends all the dirty work needed to read the TIFF file, and makes its information available to people whose business is doing actual photo editing.
 
-## com.github.gasrios.raw.editor.CommandLineEditorInvoker
+### com.github.gasrios.raw.editor.CommandLineEditorInvoker
 
 `com.github.gasrios.raw.processor.DngProcessor` subclass that provides an easy to use command line caller for image editors.
 
 Usage: `java com.github.gasrios.raw.CommandLineEditorInvoker <AnEditor implements com.github.gasrios.raw.editor.Editor> image.dng`
 
-## com.github.gasrios.raw.editor.Editor
+### com.github.gasrios.raw.editor.Editor
 
 A simple interface called from `com.github.gasrios.raw.editor.CommandLineEditorInvoker`. The point is to make image editing as simple as possible.
 
-## com.github.gasrios.raw.editor.Library
+### com.github.gasrios.raw.editor.Library
 
 Utility methods to save, display and manipulate images.
 
-# Examples
+## Examples
 
 See [raw-examples](https://github.com/gasrios/raw-examples).
 
-# Copyright & License
+## Copyright & License
 
 ### © 2016 Guilherme Rios All Rights Reserved
 
